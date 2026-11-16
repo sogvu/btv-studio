@@ -7,6 +7,8 @@ import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {defaults,settings,rowsFromText,validateRows,sheetExportUrl,safeName,csvReport} from './core.mjs';
 
+const CLOUD=process.env.BTV_CLOUD==='1';
+if(CLOUD&&!process.env.BTV_PASSWORD)throw new Error('BTV_PASSWORD required');
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 let config={};try{config=JSON.parse(fs.readFileSync(path.join(ROOT,'runtime-config.json'),'utf8'));}catch{}
 const DATA=process.env.BTV_DATA||config.dataDir||path.join(os.homedir(),'BTV Credit Studio');
@@ -14,7 +16,7 @@ const BIN=process.env.BTV_BIN||config.binDir||path.join(ROOT,'bin');
 fs.mkdirSync(DATA,{recursive:true});
 const STATE=path.join(DATA,'state.json');
 const font=process.env.BTV_FONT||path.join(process.env.WINDIR||'C:\\Windows','Fonts','times.ttf');
-const exe=name=>path.join(BIN,name+'.exe');
+const exe=name=>path.join(BIN,name+(process.platform==='win32'?'.exe':''));
 const TOKEN=crypto.randomBytes(32).toString('hex');
 let state={rows:[],settings:{...defaults,outputDir:path.join(DATA,'exports')},batchId:'',running:false};
 try{state={...state,...JSON.parse(fs.readFileSync(STATE,'utf8')),running:false};for(const r of state.rows){if(['downloading','rendering','copying','queued'].includes(r.status)){r.status='stopped';r.error='Lượt trước bị gián đoạn. Nhấn Tiếp tục / thử lại.';r.progress=0;}}}catch{}
@@ -42,7 +44,7 @@ async function download(row,work){
   const marker=path.join(sourceDir,'download.json');
   try{const cached=JSON.parse(fs.readFileSync(marker,'utf8'));if(cached.url===row.url&&fs.existsSync(cached.file)){await probe(cached.file);return cached.file;}}catch{}
   row.status='downloading';row.progress=0;save();
-  const output=await run(exe('yt-dlp'),['--ignore-config','--no-playlist','--no-overwrites','--newline','--progress','--progress-template','download:BTV:%(progress._percent_str)s','--print','after_move:BTVFILE:%(filepath)s','--no-simulate','--socket-timeout','30','--retries','3','--fragment-retries','3','--ffmpeg-location',BIN,'--js-runtimes',`node:${process.execPath}`,'-f','bv*+ba/b','-o',path.join(sourceDir,'source.%(ext)s'),'--',row.url],{cwd:work,onLine:line=>{if(line.startsWith('BTV:'))row.progress=Math.max(0,Math.min(100,parseFloat(line.slice(4))||0));},timeout:30*60*1000});
+  const output=await run(exe('yt-dlp'),['--ignore-config','--no-playlist','--no-overwrites','--newline','--progress','--progress-template','download:BTV:%(progress._percent_str)s','--print','after_move:BTVFILE:%(filepath)s','--no-simulate',...(CLOUD?['--max-filesize','200M','--limit-rate','4M']:[]),'--socket-timeout','30','--retries','3','--fragment-retries','3','--ffmpeg-location',BIN,'--js-runtimes',`node:${process.execPath}`,'-f','bv*+ba/b','-o',path.join(sourceDir,'source.%(ext)s'),'--',row.url],{cwd:work,onLine:line=>{if(line.startsWith('BTV:'))row.progress=Math.max(0,Math.min(100,parseFloat(line.slice(4))||0));},timeout:30*60*1000});
   const found=output.split(/\r?\n/).filter(s=>s.startsWith('BTVFILE:')).at(-1)?.slice(8).trim();
   if(!found||!fs.existsSync(found))throw new Error('Không tìm thấy file sau khi tải.');
   const resolved=path.resolve(found);if(!resolved.startsWith(path.resolve(sourceDir)+path.sep))throw new Error('Đường dẫn tải không hợp lệ.');
@@ -62,6 +64,7 @@ async function processRow(row){
     // Keep the source name exactly. Duplicate source names get their own subfolder.
     if(fs.existsSync(target)){const duplicateDir=path.join(state.batchDir,'trung-ten',row.id);fs.mkdirSync(duplicateDir,{recursive:true});target=path.join(duplicateDir,base+extension);}
     fs.copyFileSync(source,target,fs.constants.COPYFILE_EXCL);
+    if(CLOUD)fs.rmSync(work,{recursive:true,force:true});
     row.media=info;row.mode='original-best-v2';
     row.output=target;row.status='done';row.progress=100;row.error='';
   }catch(e){row.status=stop?'stopped':'error';row.error=e.message.slice(-2500);row.progress=0;if(partial)try{fs.unlinkSync(partial);}catch{}}
@@ -97,12 +100,19 @@ function staticFile(res,file,type){if(!fs.existsSync(file)){res.writeHead(404);r
 const server=http.createServer(async(req,res)=>{
   try{
     const host=`127.0.0.1:${server.address().port}`;
-    if(req.headers.host!==host&&req.headers.host!==`localhost:${server.address().port}`)return json(res,{error:'Invalid host'},403);
-    if(req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`)return json(res,{error:'Invalid origin'},403);
+    if(CLOUD){
+      if(req.url==='/health')return json(res,{ok:true});
+      const provided=Buffer.from(req.headers.authorization?.replace(/^Basic /,'')||'','base64').toString();
+      const expected='btv:'+process.env.BTV_PASSWORD;
+      const a=crypto.createHash('sha256').update(provided).digest(),b=crypto.createHash('sha256').update(expected).digest();
+      if(!crypto.timingSafeEqual(a,b)){res.writeHead(401,{'WWW-Authenticate':'Basic realm="BTV Studio"','Cache-Control':'no-store'});return res.end('Login: btv');}
+    }
+    if(!CLOUD&&(req.headers.host!==host&&req.headers.host!==`localhost:${server.address().port}`))return json(res,{error:'Invalid host'},403);
+    if(req.headers.origin&&req.headers.origin!==`${CLOUD?'https':'http'}://${req.headers.host}`)return json(res,{error:'Invalid origin'},403);
     const u=new URL(req.url,`http://${host}`);
     if(u.pathname.startsWith('/api/')){
       if(req.headers['x-btv-token']!==TOKEN&&!(u.pathname==='/api/preview-image'&&u.searchParams.get('token')===TOKEN))return json(res,{error:'Phiên không hợp lệ. Tải lại trang.'},403);
-      if(req.method==='GET'&&u.pathname==='/api/state')return json(res,{...state,busy,previewBusy,tools:toolsStatus(),dataDir:DATA,notice});
+      if(req.method==='GET'&&u.pathname==='/api/state')return json(res,{...state,busy,previewBusy,tools:toolsStatus(),dataDir:DATA,cloud:CLOUD,notice});
       if(req.method==='GET'&&u.pathname==='/api/output'){
         const row=state.rows.find(r=>r.id===u.searchParams.get('id'));
         if(!row||row.status!=='done'||!row.output||!fs.existsSync(row.output))throw new Error('Không tìm thấy video đã xuất.');
@@ -121,6 +131,7 @@ const server=http.createServer(async(req,res)=>{
         const text=await response.text();if(/<!doctype html|<html/i.test(text)||text.length>2_000_000)throw new Error('Bảng tính yêu cầu đăng nhập hoặc không trả về CSV. Hãy dùng cách dán hai cột.');
         return json(res,{rows:rowsFromText(text)});
       }
+      if(CLOUD&&['/api/preview','/api/open-output'].includes(u.pathname))throw new Error('Tải file bằng nút Tải video trong danh sách.');
       if(u.pathname==='/api/preview')return json(res,await preview(b));
       if(u.pathname==='/api/stop'){stop=true;for(const p of children){if(process.platform==='win32')spawn('taskkill',['/pid',String(p.pid),'/T','/F'],{windowsHide:true});else p.kill();}return json(res,{ok:true});}
       if(u.pathname==='/api/open-output'){
@@ -133,7 +144,8 @@ const server=http.createServer(async(req,res)=>{
       }
       if(busy||previewBusy)throw new Error('Đang xử lý. Hãy dừng hoặc chờ hoàn thành trước khi thay đổi.');
       if(u.pathname==='/api/save'){
-        const rows=validateRows(b.rows||[]);if(rows.length>500)throw new Error('Tối đa 500 dòng.');
+        const rows=validateRows(b.rows||[]);if(CLOUD){if(rows.length>5)throw new Error('Bản web miễn phí tối đa 5 video/lô.');for(const r of rows){const host=new URL(r.url).hostname;if(!/(^|\.)(youtube\.com|youtu\.be|tiktok\.com|instagram\.com|facebook\.com|fb\.watch|vimeo\.com|dailymotion\.com)$/.test(host))throw new Error('Bản web chỉ hỗ trợ link YouTube, TikTok, Instagram, Facebook, Vimeo, Dailymotion.');}b.settings={workers:1,outputDir:path.join(DATA,'exports')};}
+        if(rows.length>500)throw new Error('Tối đa 500 dòng.');
         state={rows,settings:settings(b.settings),mode:'original-best-v2',batchId:'',batchDir:'',running:false};save();return json(res,{ok:true});
       }
       if(u.pathname==='/api/start'){
@@ -165,9 +177,10 @@ const server=http.createServer(async(req,res)=>{
     res.writeHead(404);res.end();
   }catch(e){json(res,{error:e.message},400);}
 });
-server.listen(Number(process.env.BTV_PORT)||43189,'127.0.0.1',()=>{
+server.listen(Number(process.env.PORT||process.env.BTV_PORT)||43189,CLOUD?'0.0.0.0':'127.0.0.1',()=>{
   const url=`http://127.0.0.1:${server.address().port}`;console.log(`BTV Credit Studio: ${url}\nDữ liệu: ${DATA}`);
   fs.writeFileSync(path.join(DATA,'server.json'),JSON.stringify({url,pid:process.pid}));
 });
+if(CLOUD)setInterval(()=>{if(busy||previewBusy)return;for(const area of ['exports','work']){const base=path.join(DATA,area);if(!fs.existsSync(base))continue;for(const entry of fs.readdirSync(base,{withFileTypes:true})){const p=path.join(base,entry.name);if(entry.isDirectory()&&Date.now()-fs.statSync(p).mtimeMs>2*60*60*1000)fs.rmSync(p,{recursive:true,force:true});}}},60000).unref();
 server.on('error',e=>{console.error(e.message);process.exitCode=1;});
 process.on('SIGINT',()=>{stop=true;for(const p of children)p.kill();state.running=false;save();server.close(()=>process.exit());});

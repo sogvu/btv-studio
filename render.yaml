@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: btv-studio-web
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: BTV_PASSWORD
+        generateValue: true

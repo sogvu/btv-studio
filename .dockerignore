@@ -1,0 +1,6 @@
+.git
+bin
+data
+runtime-config.json
+*.zip
+tests
