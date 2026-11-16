@@ -44,3 +44,7 @@ Chọn 1–3 video cùng lúc. Bản web nhận tối đa 60 video/lô. Hỗ tr�
 ## V3.1 — tự thử lại
 
 Mặc định tự thử lại video lỗi đến khi hoàn thành hoặc bạn bấm Dừng. Mỗi vòng chỉ tải các video còn lỗi, nghỉ 30 giây rồi tăng dần đến tối đa 5 phút giữa các vòng. Video thành công tự rời danh sách chờ và chuyển vào mục Đã hoàn thành, file không bị xóa. Có thể tắt lựa chọn tự thử lại trước khi bắt đầu để chỉ chạy một vòng. Nếu máy chủ Render ngủ/khởi động lại, mở tool và nhấn Tiếp tục; không cam kết tiếp tục khi máy chủ bị tắt. Video đã xóa/chặn có thể lỗi mãi dù lặp lại.
+
+## V3.2
+
+Nút Xóa hết chỉ xóa danh sách, giữ file đã tải. Nút Chỉ tải lại video lỗi chỉ chọn trạng thái lỗi. Khi sửa danh sách và lưu cùng thư mục, dòng có ID/link/nguồn không đổi giữ trạng thái; dòng sửa nội dung trở về chờ. Lưu trạng thái có cơ chế thử lại khi Windows khóa file.

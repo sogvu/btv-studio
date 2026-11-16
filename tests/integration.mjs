@@ -47,6 +47,12 @@ try{
   assert.equal(sha(state.rows[1].output),sha(wide),'Audio/video bytes changed');
   assert.equal(path.basename(state.rows[1].output),'radoslawmosart.mp4');
   assert.ok(!/^001_/.test(path.basename(first)));
+  const batchBefore=state.batchId;
+  const outputDir=state.settings.outputDir;
+  await api('save',{rows:[...state.rows.map((r,i)=>({id:r.id,url:r.url,credit:i===1?'Đổi tên':r.credit})),{url:'bad-link',credit:'Cần sửa'}],settings:{autoRetry:false,workers:3,outputDir}});
+  state=await api('state');assert.equal(state.batchId,batchBefore);assert.deepEqual(state.rows.map(r=>r.status),['done','pending','error','invalid']);assert.equal(state.rows[0].output,first);
+  fail=false;await api('start',{onlyErrors:true});state=await waitDone();assert.deepEqual(state.rows.map(r=>r.status),['done','pending','done','invalid']);
+  await api('save',{rows:state.rows.slice(0,3).map(r=>({id:r.id,url:r.url,credit:r.credit})),settings:{autoRetry:false,workers:3,outputDir}});
   fail=false;await api('start',{});state=await waitDone();assert.ok(state.rows.every(r=>r.status==='done'));assert.equal(fs.statSync(first).mtimeMs,stamp,'Retry overwrote a successful clip');
   assert.equal(path.basename(state.rows[2].output),path.basename(first));assert.notEqual(state.rows[2].output,first);
   assert.equal(sha(state.rows[2].output),sha(portrait));

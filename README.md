@@ -4,7 +4,7 @@ Công cụ Windows tải hàng loạt video từ danh sách Google Sheets/CSV v�
 
 ## Tải bản chạy sẵn
 
-Vào mục **Releases** của kho, tải `BTV-Studio-3.1-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo BTV Studio.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
+Vào mục **Releases** của kho, tải `BTV-Studio-3.2-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo BTV Studio.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
 
 Giao diện chạy tại http://127.0.0.1:43189. Dữ liệu mặc định lưu tại `%USERPROFILE%\BTV Credit Studio`.
 

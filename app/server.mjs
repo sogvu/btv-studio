@@ -11,7 +11,7 @@ import {defaults,settings,rowsFromText,validateRows,sheetExportUrl,safeName,csvR
 
 const CLOUD=process.env.BTV_CLOUD==='1';
 if(CLOUD&&!process.env.BTV_PASSWORD)throw new Error('BTV_PASSWORD required');
-const VERSION='3.1.0';
+const VERSION='3.2.0';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 let config={};try{config=JSON.parse(fs.readFileSync(path.join(ROOT,'runtime-config.json'),'utf8'));}catch{}
 const DATA=process.env.BTV_DATA||config.dataDir||path.join(os.homedir(),'BTV Credit Studio');
@@ -28,7 +28,19 @@ let busy=false,stop=false,previewBusy=false,previewFile='',notice='';
 const children=new Set();
 let retryState=null,cancelRetryWait=null;
 function retryWait(ms){return new Promise(resolve=>{const timer=setTimeout(done,ms);function done(){clearTimeout(timer);cancelRetryWait=null;resolve();}cancelRetryWait=done;});}
-function save(){fs.writeFileSync(STATE+'.tmp',JSON.stringify(state,null,2));fs.renameSync(STATE+'.tmp',STATE);}
+function save(){
+  const temporary=STATE+'.'+process.pid+'.'+crypto.randomUUID()+'.tmp';
+  try{
+    fs.writeFileSync(temporary,JSON.stringify(state,null,2));
+    for(let attempt=0;;attempt++){
+      try{fs.renameSync(temporary,STATE);break;}
+      catch(e){
+        if(!['EPERM','EACCES','EBUSY'].includes(e.code)||attempt>=5)throw e;
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,50*(attempt+1));
+      }
+    }
+  }finally{try{fs.unlinkSync(temporary);}catch{}}
+}
 function report(){if(state.batchDir){fs.writeFileSync(path.join(state.batchDir,'bang_nguon.csv'),csvReport(state.rows));fs.writeFileSync(path.join(state.batchDir,'thiet_lap.json'),JSON.stringify(state.settings,null,2));}save();}
 function toolsStatus(){return {ffmpeg:fs.existsSync(exe('ffmpeg')),ffprobe:fs.existsSync(exe('ffprobe')),downloader:fs.existsSync(exe('yt-dlp'))};}
 function needTools(){if(Object.values(toolsStatus()).some(v=>!v))throw new Error('Thiếu bộ xử lý. Chạy Cài bộ xử lý.ps1 theo hướng dẫn.');}
@@ -153,12 +165,20 @@ const server=http.createServer(async(req,res)=>{
       if(u.pathname==='/api/save'){
         const rows=validateRows(b.rows||[]);if(CLOUD){if(rows.length>MAX_WEB_ROWS)throw new Error('Bản web tối đa 60 video/lô.');for(const r of rows){if(!r.error&&!supportedWebUrl(r.url))throw new Error('Nguồn chưa hỗ trợ. Hãy dùng YouTube, TikTok, Douyin, Instagram, Facebook, Vimeo hoặc Dailymotion.');}b.settings={workers:b.settings?.workers??1,autoRetry:b.settings?.autoRetry!==false,outputDir:path.join(DATA,'exports')};}
         if(rows.length>500)throw new Error('Tối đa 500 dòng.');
-        state={rows,settings:settings(b.settings),mode:'original-best-v2',batchId:'',batchDir:'',running:false};save();return json(res,{ok:true});
+        const nextSettings=settings(b.settings);
+        const previous=new Map(state.rows.map(r=>[r.id,r]));
+        const matches=(r,i)=>{const old=previous.get(b.rows[i]?.id);return old&&old.url===r.url&&old.credit===r.credit;};
+        const keepBatch=state.mode==='original-best-v2'&&state.batchId&&state.settings.outputDir===nextSettings.outputDir&&rows.some(matches);
+        const nextRows=rows.map((r,i)=>keepBatch&&matches(r,i)?{...previous.get(b.rows[i].id),index:r.index,warning:r.warning}:r);
+        state={rows:nextRows,settings:nextSettings,mode:'original-best-v2',batchId:keepBatch?state.batchId:'',batchDir:keepBatch?state.batchDir:'',running:false};save();return json(res,{ok:true});
       }
       if(u.pathname==='/api/start'){
+        const retryErrors=b.onlyErrors===true;
+        if(retryErrors&&state.mode!=='original-best-v2')throw new Error('Lô cũ cần chuyển sang bản nguyên gốc trước.');
+        if(retryErrors&&!state.rows.some(r=>r.status==='error'))throw new Error('Không có video lỗi để tải lại.');
         needTools();if(!state.rows.length)throw new Error('Chưa có danh sách video.');
         state.settings=settings(state.settings);
-        if(state.rows.some(r=>r.status==='invalid'))throw new Error('Sửa hoặc xóa các dòng thiếu/sai thông tin trước khi chạy.');
+        if(!retryErrors&&state.rows.some(r=>r.status==='invalid'))throw new Error('Sửa hoặc xóa các dòng thiếu/sai thông tin trước khi chạy.');
         if(state.mode!=='original-best-v2'){
           fs.writeFileSync(path.join(DATA,'state-before-original-'+Date.now()+'.json'),JSON.stringify(state,null,2));
           state.rows=validateRows(state.rows);state.mode='original-best-v2';state.batchId='';state.batchDir='';
@@ -168,7 +188,7 @@ const server=http.createServer(async(req,res)=>{
           const base=state.settings.outputDir||path.join(DATA,'exports');if(!path.isAbsolute(base))throw new Error('Thư mục lưu phải là đường dẫn tuyệt đối.');
           state.batchDir=path.join(base,'BTV_'+state.batchId);fs.mkdirSync(state.batchDir,{recursive:true});
         }
-        const rows=state.rows.filter(r=>r.status!=='done');if(!rows.length)throw new Error('Tất cả video đã hoàn thành.');
+        const rows=state.rows.filter(r=>retryErrors?r.status==='error':r.status!=='done');if(!rows.length)throw new Error('Tất cả video đã hoàn thành.');
         for(const r of rows){r.status='queued';r.error='';r.progress=0;}
         stop=false;notice='';report();busy=true;state.running=true;void batch(rows);return json(res,{ok:true});
       }
