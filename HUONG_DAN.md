@@ -40,3 +40,7 @@ Chạy node --test tests/core.test.mjs và node tests/integration.mjs. Phép th�
 ## V3
 
 Chọn 1–3 video cùng lúc. Bản web nhận tối đa 60 video/lô. Hỗ trợ thử nghiệm link Douyin; mở thiết lập Douyin để nhập cookies.txt Netscape chỉ của Douyin nếu nguồn yêu cầu. Cookies được gửi/lưu trên máy xử lý riêng của bạn, không lên GitHub; có nút xóa. Douyin vẫn có thể chặn dù có cookies.
+
+## V3.1 — tự thử lại
+
+Mặc định tự thử lại video lỗi đến khi hoàn thành hoặc bạn bấm Dừng. Mỗi vòng chỉ tải các video còn lỗi, nghỉ 30 giây rồi tăng dần đến tối đa 5 phút giữa các vòng. Video thành công tự rời danh sách chờ và chuyển vào mục Đã hoàn thành, file không bị xóa. Có thể tắt lựa chọn tự thử lại trước khi bắt đầu để chỉ chạy một vòng. Nếu máy chủ Render ngủ/khởi động lại, mở tool và nhấn Tiếp tục; không cam kết tiếp tục khi máy chủ bị tắt. Video đã xóa/chặn có thể lỗi mãi dù lặp lại.

@@ -5,7 +5,7 @@ export const defaults = { workers: 1, outputDir: '', mode: 'original-best-v2' };
 export function settings(input = {}) {
   const workers=Number(input.workers??1);
   if(!Number.isInteger(workers)||workers<1||workers>3)throw new Error('Số video đồng thời từ 1 đến 3.');
-  return {workers,outputDir:String(input.outputDir||'').trim(),mode:'original-best-v2'};
+  return {workers,autoRetry:input.autoRetry!==false,outputDir:String(input.outputDir||'').trim(),mode:'original-best-v2'};
 }
 export function parseDelimited(text) {
   text = String(text).replace(/^\uFEFF/, '');

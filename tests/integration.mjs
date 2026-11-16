@@ -32,7 +32,7 @@ try{
   assert.ok(token,log);
   const unauth=await fetch(base+'/api/state');assert.equal(unauth.status,403);
   const cross=await fetch(base+'/api/save',{method:'POST',headers:{origin:'https://evil.example','x-btv-token':token,'Content-Type':'application/json'},body:'{}'});assert.equal(cross.status,403);
-  await api('save',{rows:[{url:'http://127.0.0.1:43191/portrait.mp4',credit:'Nguyễn Văn A • Birds 100% "quote" : test'},{url:'http://127.0.0.1:43191/wide.mp4',credit:'radoslawmosart'},{url:'http://127.0.0.1:43191/retry.mp4',credit:'Nguyễn Văn A • Birds 100% "quote" : test'}],settings:{outputDir:path.join(dir,'exports'),workers:2}});
+  await api('save',{rows:[{url:'http://127.0.0.1:43191/portrait.mp4',credit:'Nguyễn Văn A • Birds 100% "quote" : test'},{url:'http://127.0.0.1:43191/wide.mp4',credit:'radoslawmosart'},{url:'http://127.0.0.1:43191/retry.mp4',credit:'Nguyễn Văn A • Birds 100% "quote" : test'}],settings:{autoRetry:false,outputDir:path.join(dir,'exports'),workers:2}});
   await api('start',{});let state=await waitDone();
   assert.deepEqual(state.rows.map(r=>r.status),['done','done','error'],JSON.stringify(state.rows));
   const first=state.rows[0].output;const stamp=fs.statSync(first).mtimeMs;
@@ -50,11 +50,20 @@ try{
   fail=false;await api('start',{});state=await waitDone();assert.ok(state.rows.every(r=>r.status==='done'));assert.equal(fs.statSync(first).mtimeMs,stamp,'Retry overwrote a successful clip');
   assert.equal(path.basename(state.rows[2].output),path.basename(first));assert.notEqual(state.rows[2].output,first);
   assert.equal(sha(state.rows[2].output),sha(portrait));
-  const preview=await api('preview',{credit:'Nguyễn Văn A 100%',settings:{}});assert.ok(preview.url);assert.equal((await fetch(base+preview.url)).status,200);
+  const preview=await api('preview',{credit:'Nguyễn Văn A 100%',settings:{autoRetry:false,}});assert.ok(preview.url);assert.equal((await fetch(base+preview.url)).status,200);
   assert.ok(fs.existsSync(path.join(state.batchDir,'bang_nguon.csv')));
   // Stopping a newly started batch must retain a resumable row.
-  await api('save',{rows:[{url:'http://127.0.0.1:43191/portrait.mp4',credit:'Dừng và tiếp tục'}],settings:{outputDir:path.join(dir,'stop-exports')}});
+  await api('save',{rows:[{url:'http://127.0.0.1:43191/portrait.mp4',credit:'Dừng và tiếp tục'}],settings:{autoRetry:false,outputDir:path.join(dir,'stop-exports')}});
   await api('start',{});await api('stop',{});state=await waitDone();assert.equal(state.rows[0].status,'stopped');
   await api('start',{});state=await waitDone();assert.equal(state.rows[0].status,'done');
+  // A failed automatic batch stays active during backoff and Stop interrupts that wait.
+  fail=true;
+  await api('save',{rows:[{url:'http://127.0.0.1:43191/retry.mp4',credit:'Tự thử lại'}],settings:{autoRetry:true,outputDir:path.join(dir,'auto-retry')}});
+  await api('start',{});
+  let waiting;
+  for(let i=0;i<120;i++){waiting=await api('state');if(waiting.retryState)break;await sleep(250);}
+  assert.ok(waiting.busy);assert.ok(waiting.retryState);assert.equal(waiting.rows[0].status,'error');
+  await api('stop',{});state=await waitDone();assert.equal(state.busy,false);
+  fail=false;await api('start',{});state=await waitDone();assert.equal(state.rows[0].status,'done');
   console.log(JSON.stringify({passed:true,checks:['HTTP download','parallel queue','original dimensions and SAR','byte-identical video and audio (SHA-256)','source filename without prefix','duplicate names in separate folders','retry without overwrite','stop/resume','CSV report','local API protection'],artifacts:dir},null,2));
 }finally{server.kill();fixture.close();}

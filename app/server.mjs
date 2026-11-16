@@ -1,3 +1,4 @@
+import {retryQueue} from './retry.mjs';
 import {MAX_WEB_ROWS,supportedWebUrl,isDouyin,douyinCookies} from './platforms.mjs';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -10,7 +11,7 @@ import {defaults,settings,rowsFromText,validateRows,sheetExportUrl,safeName,csvR
 
 const CLOUD=process.env.BTV_CLOUD==='1';
 if(CLOUD&&!process.env.BTV_PASSWORD)throw new Error('BTV_PASSWORD required');
-const VERSION='3.0.0';
+const VERSION='3.1.0';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 let config={};try{config=JSON.parse(fs.readFileSync(path.join(ROOT,'runtime-config.json'),'utf8'));}catch{}
 const DATA=process.env.BTV_DATA||config.dataDir||path.join(os.homedir(),'BTV Credit Studio');
@@ -25,6 +26,8 @@ let state={rows:[],settings:{...defaults,outputDir:path.join(DATA,'exports')},ba
 try{state={...state,...JSON.parse(fs.readFileSync(STATE,'utf8')),running:false};for(const r of state.rows){if(['downloading','rendering','copying','queued'].includes(r.status)){r.status='stopped';r.error='Lượt trước bị gián đoạn. Nhấn Tiếp tục / thử lại.';r.progress=0;}}}catch{}
 let busy=false,stop=false,previewBusy=false,previewFile='',notice='';
 const children=new Set();
+let retryState=null,cancelRetryWait=null;
+function retryWait(ms){return new Promise(resolve=>{const timer=setTimeout(done,ms);function done(){clearTimeout(timer);cancelRetryWait=null;resolve();}cancelRetryWait=done;});}
 function save(){fs.writeFileSync(STATE+'.tmp',JSON.stringify(state,null,2));fs.renameSync(STATE+'.tmp',STATE);}
 function report(){if(state.batchDir){fs.writeFileSync(path.join(state.batchDir,'bang_nguon.csv'),csvReport(state.rows));fs.writeFileSync(path.join(state.batchDir,'thiet_lap.json'),JSON.stringify(state.settings,null,2));}save();}
 function toolsStatus(){return {ffmpeg:fs.existsSync(exe('ffmpeg')),ffprobe:fs.existsSync(exe('ffprobe')),downloader:fs.existsSync(exe('yt-dlp'))};}
@@ -75,10 +78,9 @@ async function processRow(row){
   report();
 }
 async function batch(rows){
-  let i=0;
-  try{await Promise.all(Array.from({length:state.settings.workers},async()=>{while(i<rows.length&&!stop){const row=rows[i++];await processRow(row);}}));}
+  try{await retryQueue({rows,workers:state.settings.workers,autoRetry:state.settings.autoRetry!==false,shouldStop:()=>stop,processRow,wait:retryWait,onRound:()=>{retryState=null;},onWait:({round,delay,remaining})=>{retryState={round,nextAt:Date.now()+delay,remaining};save();}});}
   catch(e){notice='Không thể lưu kết quả: '+e.message;}
-  finally{for(const r of rows)if(r.status==='queued'){r.status='stopped';r.error='Chưa xử lý do dừng lô.';}state.running=false;busy=false;try{report();}catch(e){notice=e.message;}}
+  finally{retryState=null;for(const r of rows)if(r.status==='queued'){r.status='stopped';r.error='Chưa xử lý do dừng lô.';}state.running=false;busy=false;try{report();}catch(e){notice=e.message;}}
 }
 async function preview(input){
   needTools();if(busy||previewBusy)throw new Error('Hãy chờ tác vụ hiện tại hoàn thành.');previewBusy=true;stop=false;
@@ -116,7 +118,7 @@ const server=http.createServer(async(req,res)=>{
     const u=new URL(req.url,`http://${host}`);
     if(u.pathname.startsWith('/api/')){
       if(req.headers['x-btv-token']!==TOKEN&&!(u.pathname==='/api/preview-image'&&u.searchParams.get('token')===TOKEN))return json(res,{error:'Phiên không hợp lệ. Tải lại trang.'},403);
-      if(req.method==='GET'&&u.pathname==='/api/state')return json(res,{...state,busy,previewBusy,tools:toolsStatus(),dataDir:DATA,cloud:CLOUD,version:VERSION,douyinCookies:fs.existsSync(COOKIE_FILE),notice});
+      if(req.method==='GET'&&u.pathname==='/api/state')return json(res,{...state,busy,previewBusy,tools:toolsStatus(),dataDir:DATA,cloud:CLOUD,version:VERSION,retryState,douyinCookies:fs.existsSync(COOKIE_FILE),notice});
       if(req.method==='GET'&&u.pathname==='/api/output'){
         const row=state.rows.find(r=>r.id===u.searchParams.get('id'));
         if(!row||row.status!=='done'||!row.output||!fs.existsSync(row.output))throw new Error('Không tìm thấy video đã xuất.');
@@ -137,7 +139,7 @@ const server=http.createServer(async(req,res)=>{
       }
       if(CLOUD&&['/api/preview','/api/open-output'].includes(u.pathname))throw new Error('Tải file bằng nút Tải video trong danh sách.');
       if(u.pathname==='/api/preview')return json(res,await preview(b));
-      if(u.pathname==='/api/stop'){stop=true;for(const p of children){if(process.platform==='win32')spawn('taskkill',['/pid',String(p.pid),'/T','/F'],{windowsHide:true});else p.kill();}return json(res,{ok:true});}
+      if(u.pathname==='/api/stop'){stop=true;cancelRetryWait?.();for(const p of children){if(process.platform==='win32')spawn('taskkill',['/pid',String(p.pid),'/T','/F'],{windowsHide:true});else p.kill();}return json(res,{ok:true});}
       if(u.pathname==='/api/open-output'){
         const folder=path.resolve(state.batchDir||state.settings.outputDir||path.join(DATA,'exports'));fs.mkdirSync(folder,{recursive:true});
         await new Promise((resolve,reject)=>{
@@ -149,7 +151,7 @@ const server=http.createServer(async(req,res)=>{
       if(busy||previewBusy)throw new Error('Đang xử lý. Hãy dừng hoặc chờ hoàn thành trước khi thay đổi.');
       if(u.pathname==='/api/douyin-cookies'){if(b.clear){if(fs.existsSync(COOKIE_FILE))fs.unlinkSync(COOKIE_FILE);}else{fs.writeFileSync(COOKIE_FILE,douyinCookies(b.text),{mode:0o600});}return json(res,{ok:true});}
       if(u.pathname==='/api/save'){
-        const rows=validateRows(b.rows||[]);if(CLOUD){if(rows.length>MAX_WEB_ROWS)throw new Error('Bản web tối đa 60 video/lô.');for(const r of rows){if(!r.error&&!supportedWebUrl(r.url))throw new Error('Nguồn chưa hỗ trợ. Hãy dùng YouTube, TikTok, Douyin, Instagram, Facebook, Vimeo hoặc Dailymotion.');}b.settings={workers:b.settings?.workers??1,outputDir:path.join(DATA,'exports')};}
+        const rows=validateRows(b.rows||[]);if(CLOUD){if(rows.length>MAX_WEB_ROWS)throw new Error('Bản web tối đa 60 video/lô.');for(const r of rows){if(!r.error&&!supportedWebUrl(r.url))throw new Error('Nguồn chưa hỗ trợ. Hãy dùng YouTube, TikTok, Douyin, Instagram, Facebook, Vimeo hoặc Dailymotion.');}b.settings={workers:b.settings?.workers??1,autoRetry:b.settings?.autoRetry!==false,outputDir:path.join(DATA,'exports')};}
         if(rows.length>500)throw new Error('Tối đa 500 dòng.');
         state={rows,settings:settings(b.settings),mode:'original-best-v2',batchId:'',batchDir:'',running:false};save();return json(res,{ok:true});
       }
