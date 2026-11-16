@@ -5,19 +5,19 @@ $nodePath = Join-Path $projectRoot 'bin\node.exe'
 if (-not (Test-Path -LiteralPath $nodePath)) { $nodePath = (Get-Command node -ErrorAction SilentlyContinue).Source }
 if (-not $nodePath) { throw 'Can cai Node.js 22 tro len. Xem HUONG_DAN.md.' }
 $configPath = Join-Path $projectRoot 'runtime-config.json'
-$dataPath = Join-Path $env:USERPROFILE 'BTV Credit Studio'
+$dataPath = Join-Path $env:LOCALAPPDATA 'NoiDungTongHop'
 if (Test-Path -LiteralPath $configPath) {
     $localConfig = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
     if ($localConfig.dataDir) { $dataPath = $localConfig.dataDir }
 }
 if ($env:BTV_DATA) { $dataPath = $env:BTV_DATA }
 [System.IO.Directory]::CreateDirectory($dataPath) | Out-Null
-$port = if ($env:BTV_PORT) { $env:BTV_PORT } else { '43189' }
+$port = if ($env:BTV_PORT) { $env:BTV_PORT } else { '43210' }
 $address = 'http://127.0.0.1:' + $port
 $alreadyRunning = $false
 try {
     $page = Invoke-WebRequest -Uri $address -UseBasicParsing -TimeoutSec 2
-    $alreadyRunning = $page.Content.Contains('BTV') -and $page.Content.Contains('btv-token')
+    $alreadyRunning = $page.Content.Contains('btv-token')
 } catch {}
 if (-not $alreadyRunning) {
     $scriptPath = Join-Path $projectRoot 'app\server.mjs'

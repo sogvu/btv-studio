@@ -1,12 +1,12 @@
-# BTV Studio
+# Nội Dung Tổng Hợp
 
 Công cụ Windows tải hàng loạt video từ danh sách Google Sheets/CSV và đặt tên file theo nguồn.
 
 ## Tải bản chạy sẵn
 
-Vào mục **Releases** của kho, tải `BTV-Studio-3.2-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo BTV Studio.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
+Vào mục **Releases** của kho, tải `BTV-Studio-3.2-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo Noi Dung Tong Hop.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
 
-Giao diện chạy tại http://127.0.0.1:43189. Dữ liệu mặc định lưu tại `%USERPROFILE%\BTV Credit Studio`.
+Giao diện chạy tại http://127.0.0.1:43210. Dữ liệu mặc định lưu tại `%LOCALAPPDATA%\NoiDungTongHop`.
 
 ## Chức năng
 
@@ -25,7 +25,7 @@ Yêu cầu Windows 64-bit và Node.js 22 trở lên.
 
 1. Tải hoặc clone mã nguồn.
 2. Chạy `Cai bo xu ly.ps1` để tải bộ xử lý vào `bin`.
-3. Mở `Mo BTV Studio.cmd` hoặc chạy `npm start`.
+3. Mở `Mo Noi Dung Tong Hop.cmd` hoặc chạy `npm start`.
 
 Không cần `npm install`; ứng dụng dùng thư viện chuẩn Node.js.
 

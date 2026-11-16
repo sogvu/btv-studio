@@ -12,10 +12,10 @@ import {defaults,settings,rowsFromText,validateRows,sheetExportUrl,safeName,csvR
 
 const CLOUD=process.env.BTV_CLOUD==='1';
 if(CLOUD&&!process.env.BTV_PASSWORD)throw new Error('BTV_PASSWORD required');
-const VERSION='3.2.1';
+const VERSION='3.3.0';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 let config={};try{config=JSON.parse(fs.readFileSync(path.join(ROOT,'runtime-config.json'),'utf8'));}catch{}
-const DATA=process.env.BTV_DATA||config.dataDir||path.join(os.homedir(),'BTV Credit Studio');
+const DATA=process.env.BTV_DATA||config.dataDir||path.join(process.env.LOCALAPPDATA||os.homedir(),'NoiDungTongHop');
 const BIN=process.env.BTV_BIN||config.binDir||path.join(ROOT,'bin');
 fs.mkdirSync(DATA,{recursive:true});
 const COOKIE_FILE=path.join(DATA,'douyin-cookies.txt');
@@ -205,8 +205,8 @@ const server=http.createServer(async(req,res)=>{
     res.writeHead(404);res.end();
   }catch(e){json(res,{error:e.message},400);}
 });
-server.listen(Number(process.env.PORT||process.env.BTV_PORT)||43189,CLOUD?'0.0.0.0':'127.0.0.1',()=>{
-  const url=`http://127.0.0.1:${server.address().port}`;console.log(`BTV Credit Studio: ${url}\nDữ liệu: ${DATA}`);
+server.listen(Number(process.env.PORT||process.env.BTV_PORT)||43210,CLOUD?'0.0.0.0':'127.0.0.1',()=>{
+  const url=`http://127.0.0.1:${server.address().port}`;console.log(`Nội Dung Tổng Hợp: ${url}\nDữ liệu: ${DATA}`);
   fs.writeFileSync(path.join(DATA,'server.json'),JSON.stringify({url,pid:process.pid}));
 });
 if(CLOUD)setInterval(()=>{if(busy||previewBusy)return;for(const area of ['exports','work']){const base=path.join(DATA,area);if(!fs.existsSync(base))continue;for(const entry of fs.readdirSync(base,{withFileTypes:true})){const p=path.join(base,entry.name);if(entry.isDirectory()&&Date.now()-fs.statSync(p).mtimeMs>2*60*60*1000)fs.rmSync(p,{recursive:true,force:true});}}},60000).unref();

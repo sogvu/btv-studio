@@ -52,3 +52,7 @@ Nút Xóa hết chỉ xóa danh sách, giữ file đã tải. Nút Chỉ tải l
 ## Lưu bản web vào thư mục trên máy
 
 Trên Chrome/Edge máy tính, bấm Chọn thư mục trên máy, cấp quyền ghi rồi bắt đầu. Khi bắt đầu mà chưa chọn, trình duyệt sẽ hỏi thư mục. Video hoàn thành tự chuyển từ máy chủ vào thư mục qua luồng dữ liệu, không cần nạp toàn bộ vào RAM trình duyệt. Giữ tab mở, chọn lại sau khi tải lại trang. File có sẵn không bị ghi đè; file trùng tên chuyển vào thư mục con. Máy chủ vẫn cần lưu tạm để xử lý và chuyển file. Bản Windows tiếp tục lưu trực tiếp theo đường dẫn của máy.
+
+## Windows 3.3 — Nội Dung Tổng Hợp
+
+Giải nén và mở Mo Noi Dung Tong Hop.cmd. Địa chỉ cục bộ mặc định http://127.0.0.1:43210; dữ liệu tại %LOCALAPPDATA%\NoiDungTongHop. Nhập đường dẫn thư mục lưu trong tool để lưu trực tiếp vào máy. Bản cũ ở cổng 43189 và dữ liệu cũ vẫn được giữ. Cấu hình runtime-config.json/BTV_DATA chỉ dùng khi cần đường dẫn riêng.
