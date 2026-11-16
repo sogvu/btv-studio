@@ -11,3 +11,7 @@ Giới hạn bản web: 5 link/lô, 1 lượt tải đồng thời, giới hạn
 File được lưu tạm trên máy chủ, tải bằng nút Tải video. Dữ liệu công việc tự dọn sau khoảng 2 giờ khi tool rảnh và có thể mất sớm hơn khi Render ngủ hoặc khởi động lại. Không dùng làm nơi lưu trữ. Bản Windows trên Releases tiếp tục hoạt động như trước.
 
 Docker image cần được build và thử trên Render; kiểm thử trên Windows không xác minh được khả năng tải từng nền tảng từ IP máy chủ Render.
+
+## V3
+
+Giới hạn hiện tại thay thế thông tin v2 ở trên: 60 video/lô, 1–3 lượt. Douyin thử nghiệm và tùy chọn nhập/xóa cookies Douyin qua giao diện sau đăng nhập. Cookies lưu tạm riêng trên máy chủ, không đi vào repository.

@@ -36,3 +36,7 @@ Link yêu cầu đăng nhập, CAPTCHA, bị gỡ hoặc giới hạn vùng có 
 Tài liệu: https://github.com/yt-dlp/yt-dlp#format-selection
 
 Chạy node --test tests/core.test.mjs và node tests/integration.mjs. Phép thử tích hợp tải qua HTTP cục bộ bằng yt-dlp, so sánh SHA-256 đầu ra với nguồn, kiểm tra giữ khung/SAR (cả 2560 × 1440), tên không tiền tố, trùng tên, dừng/tiếp tục và thử lại. Không suy rộng thành kiểm thử mọi nền tảng.
+
+## V3
+
+Chọn 1–3 video cùng lúc. Bản web nhận tối đa 60 video/lô. Hỗ trợ thử nghiệm link Douyin; mở thiết lập Douyin để nhập cookies.txt Netscape chỉ của Douyin nếu nguồn yêu cầu. Cookies được gửi/lưu trên máy xử lý riêng của bạn, không lên GitHub; có nút xóa. Douyin vẫn có thể chặn dù có cookies.

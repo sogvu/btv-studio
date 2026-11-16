@@ -1,3 +1,4 @@
+import {MAX_WEB_ROWS,supportedWebUrl,isDouyin,douyinCookies} from './platforms.mjs';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,11 +10,13 @@ import {defaults,settings,rowsFromText,validateRows,sheetExportUrl,safeName,csvR
 
 const CLOUD=process.env.BTV_CLOUD==='1';
 if(CLOUD&&!process.env.BTV_PASSWORD)throw new Error('BTV_PASSWORD required');
+const VERSION='3.0.0';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 let config={};try{config=JSON.parse(fs.readFileSync(path.join(ROOT,'runtime-config.json'),'utf8'));}catch{}
 const DATA=process.env.BTV_DATA||config.dataDir||path.join(os.homedir(),'BTV Credit Studio');
 const BIN=process.env.BTV_BIN||config.binDir||path.join(ROOT,'bin');
 fs.mkdirSync(DATA,{recursive:true});
+const COOKIE_FILE=path.join(DATA,'douyin-cookies.txt');
 const STATE=path.join(DATA,'state.json');
 const font=process.env.BTV_FONT||path.join(process.env.WINDIR||'C:\\Windows','Fonts','times.ttf');
 const exe=name=>path.join(BIN,name+(process.platform==='win32'?'.exe':''));
@@ -44,7 +47,8 @@ async function download(row,work){
   const marker=path.join(sourceDir,'download.json');
   try{const cached=JSON.parse(fs.readFileSync(marker,'utf8'));if(cached.url===row.url&&fs.existsSync(cached.file)){await probe(cached.file);return cached.file;}}catch{}
   row.status='downloading';row.progress=0;save();
-  const output=await run(exe('yt-dlp'),['--ignore-config','--no-playlist','--no-overwrites','--newline','--progress','--progress-template','download:BTV:%(progress._percent_str)s','--print','after_move:BTVFILE:%(filepath)s','--no-simulate',...(CLOUD?['--max-filesize','200M','--limit-rate','4M']:[]),'--socket-timeout','30','--retries','3','--fragment-retries','3','--ffmpeg-location',BIN,'--js-runtimes',`node:${process.execPath}`,'-f','bv*+ba/b','-o',path.join(sourceDir,'source.%(ext)s'),'--',row.url],{cwd:work,onLine:line=>{if(line.startsWith('BTV:'))row.progress=Math.max(0,Math.min(100,parseFloat(line.slice(4))||0));},timeout:30*60*1000});
+  const cookieArgs=[];if(isDouyin(row.url)&&fs.existsSync(COOKIE_FILE)){const localCookie=path.join(work,'douyin-cookies.txt');fs.copyFileSync(COOKIE_FILE,localCookie);cookieArgs.push('--cookies',localCookie);}
+  const output=await run(exe('yt-dlp'),[...cookieArgs,'--ignore-config','--no-playlist','--no-overwrites','--newline','--progress','--progress-template','download:BTV:%(progress._percent_str)s','--print','after_move:BTVFILE:%(filepath)s','--no-simulate',...(CLOUD?['--max-filesize','200M','--limit-rate','4M']:[]),'--socket-timeout','30','--retries','3','--fragment-retries','3','--ffmpeg-location',BIN,'--js-runtimes',`node:${process.execPath}`,'-f','bv*+ba/b','-o',path.join(sourceDir,'source.%(ext)s'),'--',row.url],{cwd:work,onLine:line=>{if(line.startsWith('BTV:'))row.progress=Math.max(0,Math.min(100,parseFloat(line.slice(4))||0));},timeout:30*60*1000});
   const found=output.split(/\r?\n/).filter(s=>s.startsWith('BTVFILE:')).at(-1)?.slice(8).trim();
   if(!found||!fs.existsSync(found))throw new Error('Không tìm thấy file sau khi tải.');
   const resolved=path.resolve(found);if(!resolved.startsWith(path.resolve(sourceDir)+path.sep))throw new Error('Đường dẫn tải không hợp lệ.');
@@ -67,7 +71,7 @@ async function processRow(row){
     if(CLOUD)fs.rmSync(work,{recursive:true,force:true});
     row.media=info;row.mode='original-best-v2';
     row.output=target;row.status='done';row.progress=100;row.error='';
-  }catch(e){row.status=stop?'stopped':'error';row.error=e.message.slice(-2500);row.progress=0;if(partial)try{fs.unlinkSync(partial);}catch{}}
+  }catch(e){row.status=stop?'stopped':'error';row.error=(isDouyin(row.url)&&/cookies|403|Unable to extract|JSON/i.test(e.message)?'Douyin từ chối truy cập. Thử cookies Douyin mới hoặc dùng bản Windows trên mạng của bạn. Chi tiết: ':'')+e.message.slice(-1800);row.progress=0;if(partial)try{fs.unlinkSync(partial);}catch{}}
   report();
 }
 async function batch(rows){
@@ -112,7 +116,7 @@ const server=http.createServer(async(req,res)=>{
     const u=new URL(req.url,`http://${host}`);
     if(u.pathname.startsWith('/api/')){
       if(req.headers['x-btv-token']!==TOKEN&&!(u.pathname==='/api/preview-image'&&u.searchParams.get('token')===TOKEN))return json(res,{error:'Phiên không hợp lệ. Tải lại trang.'},403);
-      if(req.method==='GET'&&u.pathname==='/api/state')return json(res,{...state,busy,previewBusy,tools:toolsStatus(),dataDir:DATA,cloud:CLOUD,notice});
+      if(req.method==='GET'&&u.pathname==='/api/state')return json(res,{...state,busy,previewBusy,tools:toolsStatus(),dataDir:DATA,cloud:CLOUD,version:VERSION,douyinCookies:fs.existsSync(COOKIE_FILE),notice});
       if(req.method==='GET'&&u.pathname==='/api/output'){
         const row=state.rows.find(r=>r.id===u.searchParams.get('id'));
         if(!row||row.status!=='done'||!row.output||!fs.existsSync(row.output))throw new Error('Không tìm thấy video đã xuất.');
@@ -143,8 +147,9 @@ const server=http.createServer(async(req,res)=>{
         return json(res,{ok:true,folder});
       }
       if(busy||previewBusy)throw new Error('Đang xử lý. Hãy dừng hoặc chờ hoàn thành trước khi thay đổi.');
+      if(u.pathname==='/api/douyin-cookies'){if(b.clear){if(fs.existsSync(COOKIE_FILE))fs.unlinkSync(COOKIE_FILE);}else{fs.writeFileSync(COOKIE_FILE,douyinCookies(b.text),{mode:0o600});}return json(res,{ok:true});}
       if(u.pathname==='/api/save'){
-        const rows=validateRows(b.rows||[]);if(CLOUD){if(rows.length>5)throw new Error('Bản web miễn phí tối đa 5 video/lô.');for(const r of rows){const host=new URL(r.url).hostname;if(!/(^|\.)(youtube\.com|youtu\.be|tiktok\.com|instagram\.com|facebook\.com|fb\.watch|vimeo\.com|dailymotion\.com)$/.test(host))throw new Error('Bản web chỉ hỗ trợ link YouTube, TikTok, Instagram, Facebook, Vimeo, Dailymotion.');}b.settings={workers:1,outputDir:path.join(DATA,'exports')};}
+        const rows=validateRows(b.rows||[]);if(CLOUD){if(rows.length>MAX_WEB_ROWS)throw new Error('Bản web tối đa 60 video/lô.');for(const r of rows){if(!r.error&&!supportedWebUrl(r.url))throw new Error('Nguồn chưa hỗ trợ. Hãy dùng YouTube, TikTok, Douyin, Instagram, Facebook, Vimeo hoặc Dailymotion.');}b.settings={workers:b.settings?.workers??1,outputDir:path.join(DATA,'exports')};}
         if(rows.length>500)throw new Error('Tối đa 500 dòng.');
         state={rows,settings:settings(b.settings),mode:'original-best-v2',batchId:'',batchDir:'',running:false};save();return json(res,{ok:true});
       }

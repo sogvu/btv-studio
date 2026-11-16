@@ -4,7 +4,7 @@ Công cụ Windows tải hàng loạt video từ danh sách Google Sheets/CSV v�
 
 ## Tải bản chạy sẵn
 
-Vào mục **Releases** của kho, tải `BTV-Studio-2.0-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo BTV Studio.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
+Vào mục **Releases** của kho, tải `BTV-Studio-3.0-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo BTV Studio.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
 
 Giao diện chạy tại http://127.0.0.1:43189. Dữ liệu mặc định lưu tại `%USERPROFILE%\BTV Credit Studio`.
 
@@ -49,3 +49,7 @@ Xem [hướng dẫn](HUONG_DAN.md) và [kết quả kiểm thử](KIEM_THU.md).
 - [FFmpeg](https://ffmpeg.org/) và [FFmpeg Builds](https://github.com/yt-dlp/FFmpeg-Builds)
 
 Bản ZIP có thư mục `licenses` kèm giấy phép và liên kết nguồn của các thành phần đóng gói.
+
+## Phiên bản 3
+
+Giao diện mới; bản web hỗ trợ 60 video/lô và 1–3 video đồng thời. Douyin ở mức thử nghiệm: nhận link đầy đủ/rút gọn và file cookies Netscape chỉ thuộc Douyin. Kiểm tra thực tế 16/11/2026: link mẫu bị 403 và yêu cầu cookies mới; chưa xác minh tải Douyin thành công. Render Free có thể quá tải với 3 lượt, giảm còn 1–2 nếu cần.
