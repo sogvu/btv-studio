@@ -1,0 +1,14 @@
+bin/*
+!bin/.gitkeep
+data/*
+!data/.gitkeep
+runtime-config.json
+node_modules/
+*.log
+dist/
+*.zip
+*.mp4
+*.webm
+*.mkv
+.env
+.env.*
