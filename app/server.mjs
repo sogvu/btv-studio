@@ -1,3 +1,4 @@
+import {downloadError} from './errors.mjs';
 import {retryQueue} from './retry.mjs';
 import {MAX_WEB_ROWS,supportedWebUrl,isDouyin,douyinCookies} from './platforms.mjs';
 import http from 'node:http';
@@ -11,7 +12,7 @@ import {defaults,settings,rowsFromText,validateRows,sheetExportUrl,safeName,csvR
 
 const CLOUD=process.env.BTV_CLOUD==='1';
 if(CLOUD&&!process.env.BTV_PASSWORD)throw new Error('BTV_PASSWORD required');
-const VERSION='3.2.0';
+const VERSION='3.2.1';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 let config={};try{config=JSON.parse(fs.readFileSync(path.join(ROOT,'runtime-config.json'),'utf8'));}catch{}
 const DATA=process.env.BTV_DATA||config.dataDir||path.join(os.homedir(),'BTV Credit Studio');
@@ -85,8 +86,8 @@ async function processRow(row){
     fs.copyFileSync(source,target,fs.constants.COPYFILE_EXCL);
     if(CLOUD)fs.rmSync(work,{recursive:true,force:true});
     row.media=info;row.mode='original-best-v2';
-    row.output=target;row.status='done';row.progress=100;row.error='';
-  }catch(e){row.status=stop?'stopped':'error';row.error=(isDouyin(row.url)&&/cookies|403|Unable to extract|JSON/i.test(e.message)?'Douyin từ chối truy cập. Thử cookies Douyin mới hoặc dùng bản Windows trên mạng của bạn. Chi tiết: ':'')+e.message.slice(-1800);row.progress=0;if(partial)try{fs.unlinkSync(partial);}catch{}}
+    row.output=target;row.status='done';row.progress=100;row.error='';row.errorDetails='';
+  }catch(e){row.status=stop?'stopped':'error';Object.assign(row,downloadError(e.message));row.progress=0;if(partial)try{fs.unlinkSync(partial);}catch{}}
   report();
 }
 async function batch(rows){
@@ -130,7 +131,7 @@ const server=http.createServer(async(req,res)=>{
     const u=new URL(req.url,`http://${host}`);
     if(u.pathname.startsWith('/api/')){
       if(req.headers['x-btv-token']!==TOKEN&&!(u.pathname==='/api/preview-image'&&u.searchParams.get('token')===TOKEN))return json(res,{error:'Phiên không hợp lệ. Tải lại trang.'},403);
-      if(req.method==='GET'&&u.pathname==='/api/state')return json(res,{...state,busy,previewBusy,tools:toolsStatus(),dataDir:DATA,cloud:CLOUD,version:VERSION,retryState,douyinCookies:fs.existsSync(COOKIE_FILE),notice});
+      if(req.method==='GET'&&u.pathname==='/api/state')return json(res,{...state,rows:state.rows.map(r=>r.error?{...r,...downloadError(r.errorDetails||r.error)}:r),busy,previewBusy,tools:toolsStatus(),dataDir:DATA,cloud:CLOUD,version:VERSION,retryState,douyinCookies:fs.existsSync(COOKIE_FILE),notice});
       if(req.method==='GET'&&u.pathname==='/api/output'){
         const row=state.rows.find(r=>r.id===u.searchParams.get('id'));
         if(!row||row.status!=='done'||!row.output||!fs.existsSync(row.output))throw new Error('Không tìm thấy video đã xuất.');
