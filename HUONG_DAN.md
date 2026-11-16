@@ -48,3 +48,7 @@ Mặc định tự thử lại video lỗi đến khi hoàn thành hoặc bạn 
 ## V3.2
 
 Nút Xóa hết chỉ xóa danh sách, giữ file đã tải. Nút Chỉ tải lại video lỗi chỉ chọn trạng thái lỗi. Khi sửa danh sách và lưu cùng thư mục, dòng có ID/link/nguồn không đổi giữ trạng thái; dòng sửa nội dung trở về chờ. Lưu trạng thái có cơ chế thử lại khi Windows khóa file.
+
+## Lưu bản web vào thư mục trên máy
+
+Trên Chrome/Edge máy tính, bấm Chọn thư mục trên máy, cấp quyền ghi rồi bắt đầu. Khi bắt đầu mà chưa chọn, trình duyệt sẽ hỏi thư mục. Video hoàn thành tự chuyển từ máy chủ vào thư mục qua luồng dữ liệu, không cần nạp toàn bộ vào RAM trình duyệt. Giữ tab mở, chọn lại sau khi tải lại trang. File có sẵn không bị ghi đè; file trùng tên chuyển vào thư mục con. Máy chủ vẫn cần lưu tạm để xử lý và chuyển file. Bản Windows tiếp tục lưu trực tiếp theo đường dẫn của máy.

@@ -200,7 +200,7 @@ const server=http.createServer(async(req,res)=>{
       const html=fs.readFileSync(path.join(ROOT,'public','index.html'),'utf8').replace('__TOKEN__',TOKEN);
       res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"});return res.end(html);
     }
-    const files={'/brand.css':['brand.css','text/css; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8'],'/ui.js':['ui.js','text/javascript; charset=utf-8']};
+    const files={'/local-save.mjs':['local-save.mjs','text/javascript; charset=utf-8'],'/brand.css':['brand.css','text/css; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8'],'/ui.js':['ui.js','text/javascript; charset=utf-8']};
     if(files[u.pathname])return staticFile(res,path.join(ROOT,'public',files[u.pathname][0]),files[u.pathname][1]);
     res.writeHead(404);res.end();
   }catch(e){json(res,{error:e.message},400);}
