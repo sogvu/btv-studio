@@ -18,6 +18,7 @@ function draw(){
    if(r.error){const error=document.createElement('div');error.className='row-error';error.textContent=r.error;error.title=r.error;td.append(error);}tr.append(td);td=document.createElement('td');const remove=document.createElement('button');remove.className='delete';remove.textContent='×';remove.title='Xóa dòng';remove.onclick=()=>{rows=rows.filter(x=>x!==r);rows.forEach((x,i)=>x.index=i+1);dirty=true;draw();};td.append(remove);tr.append(td);body.append(tr);
  }
  const done=rows.filter(r=>r.status==='done').length,errors=rows.filter(r=>['error','invalid'].includes(r.status)).length;
+ $('#stat-total').textContent=rows.length;$('#stat-active').textContent=rows.filter(r=>['downloading','copying','rendering'].includes(r.status)).length;$('#stat-done').textContent=done;$('#stat-error').textContent=errors;
  $('#row-count').textContent=rows.length?`${rows.filter(r=>r.status!=='done').length} video còn chờ / lỗi`:'Chưa có video';$('#counts').textContent=`${done} hoàn thành · ${errors} lỗi`;
  const pct=rows.length?Math.round(rows.reduce((n,r)=>n+(r.status==='done'?100:r.status==='copying'?99:r.status==='downloading'?r.progress:0),0)/rows.length):0;
  $('#total-progress').value=pct;$('#percent').textContent=pct+'%';$('#progress-title').textContent=current?.busy?`Đang xử lý · ${done}/${rows.length} clip`:done===rows.length&&rows.length?'Đã hoàn thành lô video':`${done}/${rows.length} clip hoàn thành`;
