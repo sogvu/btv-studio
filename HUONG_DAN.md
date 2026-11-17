@@ -66,3 +66,7 @@ File đã tải bằng bản cũ vẫn giữ nguyên. Nhấn Xuất lại danh s
 ## 3.4.2 — Tự bỏ qua chuyển mã khi đã đạt chuẩn
 
 Kiểm tra MP4, H.264 8-bit, AAC 48 kHz (nếu có tiếng) và quét toàn bộ nhịp khung hình. File đạt chuẩn được sao chép nguyên byte, không nén lại. File chưa đạt chuẩn hoặc không xác minh được sẽ dùng bước chuyển mã của 3.4. Danh sách hoàn thành ghi Giữ nguyên file / Đã chuẩn hóa. Vẫn cần tải video nguồn để kiểm tra.
+
+## 3.4.3 — Tối ưu tốc độ
+
+Bỏ giới hạn 4 MiB/s trên web. Tải đồng thời 4 đoạn trên web, 8 đoạn trên Windows đối với nguồn HLS/DASH hỗ trợ. Nếu thiếu đoạn, báo lỗi để thử lại, không bỏ qua đoạn. Windows chia tối đa 8 luồng CPU/video theo số video đồng thời; Render giữ 1 luồng để hạn chế quá tải. Vẫn kiểm tra CFR đầy đủ, giữ chất lượng nguồn và MP4 Premiere. Dòng Đang tải hiển thị tốc độ và thời gian dự kiến khi nguồn cung cấp. Tốc độ phụ thuộc nguồn, mạng và CPU.

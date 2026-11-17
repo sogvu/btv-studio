@@ -1,3 +1,4 @@
+import {downloadTuning,cpuThreads} from './performance.mjs';
 import {OUTPUT_MODE,premiereArgs,verifyPremiere,originalCandidate,constantRateDetected,inspectOriginalArgs} from './premiere.mjs';
 import {downloadError} from './errors.mjs';
 import {retryQueue} from './retry.mjs';
@@ -13,7 +14,7 @@ import {defaults,settings,rowsFromText,validateRows,sheetExportUrl,safeName,csvR
 
 const CLOUD=process.env.BTV_CLOUD==='1';
 if(CLOUD&&!process.env.BTV_PASSWORD)throw new Error('BTV_PASSWORD required');
-const VERSION='3.4.2';
+const VERSION='3.4.3';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 let config={};try{config=JSON.parse(fs.readFileSync(path.join(ROOT,'runtime-config.json'),'utf8'));}catch{}
 const DATA=process.env.BTV_DATA||config.dataDir||path.join(process.env.LOCALAPPDATA||os.homedir(),'NoiDungTongHop');
@@ -65,7 +66,7 @@ async function download(row,work){
   try{const cached=JSON.parse(fs.readFileSync(marker,'utf8'));if(cached.url===row.url&&fs.existsSync(cached.file)){await probe(cached.file);return cached.file;}}catch{}
   row.status='downloading';row.progress=0;save();
   const cookieArgs=[];if(isDouyin(row.url)&&fs.existsSync(COOKIE_FILE)){const localCookie=path.join(work,'douyin-cookies.txt');fs.copyFileSync(COOKIE_FILE,localCookie);cookieArgs.push('--cookies',localCookie);}
-  const output=await run(exe('yt-dlp'),[...cookieArgs,'--ignore-config','--no-playlist','--no-overwrites','--newline','--progress','--progress-template','download:BTV:%(progress._percent_str)s','--print','after_move:BTVFILE:%(filepath)s','--no-simulate',...(CLOUD?['--max-filesize','200M','--limit-rate','4M']:[]),'--socket-timeout','30','--retries','3','--fragment-retries','3','--ffmpeg-location',BIN,'--js-runtimes',`node:${process.execPath}`,'-f','bv*+ba/b','-o',path.join(sourceDir,'source.%(ext)s'),'--',row.url],{cwd:work,onLine:line=>{if(line.startsWith('BTV:'))row.progress=Math.max(0,Math.min(100,parseFloat(line.slice(4))||0));},timeout:30*60*1000});
+  const output=await run(exe('yt-dlp'),[...cookieArgs,'--ignore-config','--no-playlist','--no-overwrites','--newline','--progress','--progress-template','download:BTV:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s','--print','after_move:BTVFILE:%(filepath)s','--no-simulate',...downloadTuning(CLOUD),'--socket-timeout','30','--retries','3','--fragment-retries','3','--ffmpeg-location',BIN,'--js-runtimes',`node:${process.execPath}`,'-f','bv*+ba/b','-o',path.join(sourceDir,'source.%(ext)s'),'--',row.url],{cwd:work,onLine:line=>{if(line.startsWith('BTV:')){const [percent,speed,eta]=line.slice(4).split('|');row.progress=Math.max(0,Math.min(100,parseFloat(percent)||0));row.transfer=[speed,eta&&'còn '+eta].filter(x=>x&&!x.includes('Unknown')&&!x.includes('N/A')).join(' · ');}},timeout:30*60*1000});
   const found=output.split(/\r?\n/).filter(s=>s.startsWith('BTVFILE:')).at(-1)?.slice(8).trim();
   if(!found||!fs.existsSync(found))throw new Error('Không tìm thấy file sau khi tải.');
   const resolved=path.resolve(found);if(!resolved.startsWith(path.resolve(sourceDir)+path.sep))throw new Error('Đường dẫn tải không hợp lệ.');
@@ -79,10 +80,11 @@ async function processRow(row){
     fs.mkdirSync(work,{recursive:true});
     const source=await download(row,work);if(stop)throw new Error('Đã dừng theo yêu cầu.');
     const info=await probe(source);
+    const threads=cpuThreads(CLOUD,os.availableParallelism(),state.settings.workers);
     let keepOriginal=false;
     row.status='checking';row.progress=0;row.error='';save();
     if(originalCandidate(info,source)){
-      try{keepOriginal=constantRateDetected(await run(exe('ffmpeg'),inspectOriginalArgs(source),{cwd:work,returnStderr:true}));}
+      try{keepOriginal=constantRateDetected(await run(exe('ffmpeg'),inspectOriginalArgs(source,threads),{cwd:work,returnStderr:true}));}
       catch(e){if(stop)throw e;}
     }
     let result=info,ready=source;
@@ -90,7 +92,7 @@ async function processRow(row){
       row.status='rendering';row.progress=0;save();
       partial=path.join(work,'premiere.partial.mp4');
       const duration=Number(info.format?.duration)||0;
-      await run(exe('ffmpeg'),premiereArgs(source,partial,info),{cwd:work,onLine:line=>{if(line.startsWith('out_time_us=')&&duration)row.progress=Math.min(99,Math.round(Number(line.split('=')[1])/1000000/duration*100));}});
+      await run(exe('ffmpeg'),premiereArgs(source,partial,info,threads),{cwd:work,onLine:line=>{if(line.startsWith('out_time_us=')&&duration)row.progress=Math.min(99,Math.round(Number(line.split('=')[1])/1000000/duration*100));}});
       result=await probe(partial);ready=partial;
     }
     if(stop)throw Error('Đã dừng theo yêu cầu.');
