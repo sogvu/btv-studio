@@ -74,3 +74,7 @@ Bỏ giới hạn 4 MiB/s trên web. Tải đồng thời 4 đoạn trên web, 8
 ## 3.4.4 — Chọn MP4 từ nguồn trước khi tải
 
 Tool ưu tiên bản MP4 H.264 và tiếng AAC nguồn cung cấp, ưu tiên AAC 48 kHz nếu có. Hình/tiếng tách riêng chỉ ghép luồng, không mã hóa lại. Sau khi tải, file đúng chuẩn CFR được giữ nguyên. Chỉ chuyển mã khi nguồn không có bản phù hợp hoặc file thực tế chưa đạt chuẩn. Bản MP4 có thể có độ phân giải thấp hơn bản AV1/VP9 tốt nhất trên một số nguồn. Cache nguồn cũ được tách để không dùng lại nhầm WebM. Video đã hoàn thành không bị tải lại.
+
+## 3.4.5 — Sửa mất kết nối và giảm quá tải Render
+
+Tự lấy phiên mới khi máy chủ khởi động lại, không tải lại trang và không mất nội dung đang nhập. Các yêu cầu cập nhật tiến độ không chạy chồng lên nhau; lỗi mạng có thời gian chờ và tự thử lại. Chỉ tự gửi lại thao tác khi máy chủ đã xác nhận từ chối vì phiên cũ; không tự gửi lại POST khi mất mạng để tránh chạy hai lần. Bản web chỉ xử lý 1 video/lượt, tối đa 2 đoạn tải song song và dùng cấu hình mã hóa ít bộ đệm RAM; Windows vẫn 1–3 video/lượt. Khi máy chủ bị gián đoạn, các dòng dừng cần nhấn Tiếp tục. Không bảo đảm Render Free đủ RAM cho mọi video độ phân giải cao; file tạm có thể mất khi Render thay máy.
