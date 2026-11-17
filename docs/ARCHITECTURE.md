@@ -55,3 +55,7 @@ Factory giữ trạng thái riêng theo application/trang. getState() lấy stat
 BTV_BIN cần trỏ tới thư mục có ffmpeg/ffprobe/yt-dlp. BTV_DATA trong kiểm thử phải là thư mục tạm riêng; không dùng dữ liệu thật. Tích hợp tải dùng cổng 43190/43191, thử restart dùng 43192; chạy tuần tự khi trùng cổng. Không có npm install cho runtime.
 
 `tests/architecture.test.mjs` kiểm tra đường dẫn import, vòng phụ thuộc, không import điểm vào server, không kéo Node/backend vào frontend và giữ module chính sách độc lập với HTTP/filesystem/tiến trình.
+
+## Nhận diện 3S từ 3.6
+
+`public/theme-3s.css` sở hữu token màu, viền và hiệu ứng; `public/brand-intro.mjs` chỉ quản lý intro, sessionStorage hiển thị lần đầu, focus/inert và nút đóng/xem lại. `public/ui.js` ghép intro và studio, không chờ intro kết thúc để tải trạng thái. Hai module này không được sửa queue, phát lệnh tải hoặc thay codec. Trang tải GitHub Pages dùng bản sao theme/intro tương ứng trong `website/`. Logo gốc được giữ trong SVG có xử lý nền trong suốt.

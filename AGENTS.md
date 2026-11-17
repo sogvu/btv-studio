@@ -43,3 +43,6 @@ Duy trì tool tải video Windows và web Render với hành vi đã chốt. M�
 
 ## Tài nguyên và giới hạn
 Node.js >=22, thư viện chuẩn; yt-dlp, FFmpeg, ffprobe lấy từ bộ bin cấu hình. BTV_DATA, BTV_BIN, BTV_PORT/PORT và runtime-config.json giữ ý nghĩa hiện tại. Không đọc hay in secret từ môi trường nếu không cần. Chọn lọc tài liệu và công cụ, không lặp kiểm tra đã đạt trừ khi có thay đổi hoặc vấn đề mới.
+
+## Nhận diện 3S MEDIA
+Màu và hiệu ứng đặt ở theme-3s.css; intro đặt ở brand-intro.mjs. Giữ intro có thể bỏ qua/Esc, khôi phục focus/inert và giảm chuyển động theo hệ thống. Intro chỉ hiển thị, không điều khiển hàng đợi hoặc chặn tiến trình tải phía máy chủ. Đồng bộ bản theme/intro trên GitHub Pages khi sửa giao diện dùng chung.

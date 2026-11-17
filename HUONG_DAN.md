@@ -82,3 +82,7 @@ Tự lấy phiên mới khi máy chủ khởi động lại, không tải lại 
 ## 3.5.0 — Tách module để bảo trì
 
 Giữ tính năng và cách dùng 3.4.5. Tách tải nguồn, xử lý MP4, hàng đợi, lưu trạng thái, file kết quả, nhập Sheets, cookies, xác thực và API. Giao diện tách điều phối, hiển thị bảng và lưu file; điểm vào không đổi. Có AGENTS.md quy định phạm vi sửa và kiểm thử, docs/ARCHITECTURE.md ghi trách nhiệm module. Không cần cài thêm thư viện. Dữ liệu/state cũ và tên thư mục lưu giữ tương thích.
+
+## 3.6.0 — Nhận diện 3S MEDIA
+
+Bản Windows và web dùng logo 3S MEDIA nền trong suốt và bốn màu cam, đỏ, xanh lá, xanh ngọc. Intro tự hiện khoảng 2,4 giây ở lần mở đầu của mỗi tab, không phát âm thanh; có nút Bỏ qua hoặc Vào không gian làm việc. Nút Xem intro 3S ở đầu trang mở lại intro và chờ bạn chọn vào/bỏ qua; phím Esc cũng đóng được. Chuyển động tự giảm theo tùy chọn của hệ điều hành. Nút có hiệu ứng rê chuột/nhấn, viền bo tròn và vòng focus bàn phím. Tính năng tải, chuẩn MP4, retry, lưu file và giới hạn Windows/web giữ nguyên.

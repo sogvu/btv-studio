@@ -4,7 +4,7 @@ Công cụ Windows tải hàng loạt video từ danh sách Google Sheets/CSV v�
 
 ## Tải bản chạy sẵn
 
-Vào mục **Releases** của kho, tải `Noi-Dung-Tong-Hop-3.5.0-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo Noi Dung Tong Hop.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
+Vào mục **Releases** của kho, tải `Noi-Dung-Tong-Hop-3.6.0-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo Noi Dung Tong Hop.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
 
 Giao diện chạy tại http://127.0.0.1:43210. Dữ liệu mặc định lưu tại `%LOCALAPPDATA%\NoiDungTongHop`.
 
@@ -57,3 +57,7 @@ Giao diện mới; bản web hỗ trợ 60 video/lô và 1–3 video đồng th�
 ## Cấu trúc và quy tắc phát triển
 
 Phiên bản 3.5 tách backend và giao diện thành các module riêng, giữ tính năng của 3.4.5. Xem [AGENTS.md](AGENTS.md), [bảng trách nhiệm module](docs/ARCHITECTURE.md), [rà soát](docs/REFRACTOR_AUDIT.md) và [kiểm chứng 3.5](docs/VALIDATION_35.md). Điểm vào vẫn là `app/server.mjs` và `public/ui.js`; chạy không cần cài thêm dependency. Bộ kiểm thử dùng `npm test` và `npm run test:integration` với thư mục bộ xử lý được cấu hình theo hướng dẫn.
+
+## Nhận diện 3S MEDIA — 3.6
+
+Logo không nền, theme bốn màu, intro có thể bỏ qua/xem lại và hiệu ứng nút đã có trên web và Windows. Xem [kiểm chứng 3.6](docs/VALIDATION_36.md). Bản Windows vẫn mở bằng Mo Noi Dung Tong Hop.cmd.
