@@ -62,3 +62,7 @@ Giải nén và mở Mo Noi Dung Tong Hop.cmd. Địa chỉ cục bộ mặc đ�
 Tải nguồn tốt nhất rồi xuất .mp4: H.264 High, yuv420p, CFR, AAC 48 kHz nếu có tiếng. CRF18/preset veryfast; không upscale, không thêm chữ. HDR tone-map về SDR; kích thước lẻ thêm tối đa một pixel ở mép. Không còn bảo đảm giống từng byte nguồn vì chuyển mã. Chậm hơn, đặc biệt Render Free; nên dùng 1 lượt trên web.
 
 File đã tải bằng bản cũ vẫn giữ nguyên. Nhấn Xuất lại danh sách thành MP4 Premiere để tạo lô mới. Chưa kiểm thử trực tiếp mọi phiên bản Premiere; kiểm tra codec, frame timestamp và giải mã file bằng FFmpeg.
+
+## 3.4.2 — Tự bỏ qua chuyển mã khi đã đạt chuẩn
+
+Kiểm tra MP4, H.264 8-bit, AAC 48 kHz (nếu có tiếng) và quét toàn bộ nhịp khung hình. File đạt chuẩn được sao chép nguyên byte, không nén lại. File chưa đạt chuẩn hoặc không xác minh được sẽ dùng bước chuyển mã của 3.4. Danh sách hoàn thành ghi Giữ nguyên file / Đã chuẩn hóa. Vẫn cần tải video nguồn để kiểm tra.

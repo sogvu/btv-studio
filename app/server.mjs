@@ -1,4 +1,4 @@
-import {OUTPUT_MODE,premiereArgs,verifyPremiere} from './premiere.mjs';
+import {OUTPUT_MODE,premiereArgs,verifyPremiere,originalCandidate,constantRateDetected,inspectOriginalArgs} from './premiere.mjs';
 import {downloadError} from './errors.mjs';
 import {retryQueue} from './retry.mjs';
 import {MAX_WEB_ROWS,supportedWebUrl,isDouyin,douyinCookies} from './platforms.mjs';
@@ -13,7 +13,7 @@ import {defaults,settings,rowsFromText,validateRows,sheetExportUrl,safeName,csvR
 
 const CLOUD=process.env.BTV_CLOUD==='1';
 if(CLOUD&&!process.env.BTV_PASSWORD)throw new Error('BTV_PASSWORD required');
-const VERSION='3.4.1';
+const VERSION='3.4.2';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 let config={};try{config=JSON.parse(fs.readFileSync(path.join(ROOT,'runtime-config.json'),'utf8'));}catch{}
 const DATA=process.env.BTV_DATA||config.dataDir||path.join(process.env.LOCALAPPDATA||os.homedir(),'NoiDungTongHop');
@@ -25,7 +25,7 @@ const font=process.env.BTV_FONT||path.join(process.env.WINDIR||'C:\\Windows','Fo
 const exe=name=>path.join(BIN,name+(process.platform==='win32'?'.exe':''));
 const TOKEN=crypto.randomBytes(32).toString('hex');
 let state={rows:[],settings:{...defaults,outputDir:path.join(DATA,'exports')},batchId:'',running:false};
-try{state={...state,...JSON.parse(fs.readFileSync(STATE,'utf8')),running:false};for(const r of state.rows){if(['downloading','rendering','copying','queued'].includes(r.status)){r.status='stopped';r.error='Lượt trước bị gián đoạn. Nhấn Tiếp tục / thử lại.';r.progress=0;}}}catch{}
+try{state={...state,...JSON.parse(fs.readFileSync(STATE,'utf8')),running:false};for(const r of state.rows){if(['downloading','checking','rendering','copying','queued'].includes(r.status)){r.status='stopped';r.error='Lượt trước bị gián đoạn. Nhấn Tiếp tục / thử lại.';r.progress=0;}}}catch{}
 let busy=false,stop=false,previewBusy=false,previewFile='',notice='';
 const children=new Set();
 let retryState=null,cancelRetryWait=null;
@@ -46,18 +46,18 @@ function save(){
 function report(){if(state.batchDir){fs.writeFileSync(path.join(state.batchDir,'bang_nguon.csv'),csvReport(state.rows));fs.writeFileSync(path.join(state.batchDir,'thiet_lap.json'),JSON.stringify(state.settings,null,2));}save();}
 function toolsStatus(){return {ffmpeg:fs.existsSync(exe('ffmpeg')),ffprobe:fs.existsSync(exe('ffprobe')),downloader:fs.existsSync(exe('yt-dlp'))};}
 function needTools(){if(Object.values(toolsStatus()).some(v=>!v))throw new Error('Thiếu bộ xử lý. Chạy Cài bộ xử lý.ps1 theo hướng dẫn.');}
-function run(command,args,{cwd=DATA,onLine=()=>{},cancellable=true,timeout=0}={}){
+function run(command,args,{cwd=DATA,onLine=()=>{},cancellable=true,timeout=0,returnStderr=false}={}){
   return new Promise((resolve,reject)=>{
     const p=spawn(command,args,{cwd,windowsHide:true,shell:false});if(cancellable)children.add(p);
     let err='',out='',pending='',settled=false;
     const timer=timeout?setTimeout(()=>{p.kill();done(new Error('Quá thời gian xử lý. Hãy thử lại.'));},timeout):null;
-    function done(e){if(settled)return;settled=true;if(timer)clearTimeout(timer);children.delete(p);e?reject(e):resolve(out);}
+    function done(e){if(settled)return;settled=true;if(timer)clearTimeout(timer);children.delete(p);e?reject(e):resolve(returnStderr?err:out);}
     p.stdout.on('data',b=>{const str=b.toString();out=(out+str).slice(-100000);pending+=str;let n;while((n=pending.indexOf('\n'))>=0){onLine(pending.slice(0,n).trim());pending=pending.slice(n+1);}});
     p.stderr.on('data',b=>{err=(err+b.toString()).slice(-6000);});
     p.on('error',e=>done(e));p.on('close',code=>done(code===0?null:new Error(stop&&cancellable?'Đã dừng theo yêu cầu.':err.trim()||`Bộ xử lý kết thúc với mã ${code}.`)));
   });
 }
-async function probe(file){const output=await run(exe('ffprobe'),['-v','error','-show_entries','format=duration,format_name:stream=codec_type,codec_name,width,height,pix_fmt,sample_rate,avg_frame_rate,r_frame_rate,color_transfer,sample_aspect_ratio','-of','json',file],{timeout:30000});const result=JSON.parse(output);if(!result.streams?.some(s=>s.codec_type==='video'))throw new Error('Nguồn không có luồng video.');return result;}
+async function probe(file){const output=await run(exe('ffprobe'),['-v','error','-show_entries','format=duration,format_name:format_tags=major_brand:stream=codec_type,codec_name,width,height,pix_fmt,sample_rate,avg_frame_rate,r_frame_rate,color_transfer,sample_aspect_ratio','-of','json',file],{timeout:30000});const result=JSON.parse(output);if(!result.streams?.some(s=>s.codec_type==='video'))throw new Error('Nguồn không có luồng video.');return result;}
 async function prepare(work,credit){fs.mkdirSync(work,{recursive:true});fs.copyFileSync(font,path.join(work,'font.ttf'));fs.writeFileSync(path.join(work,'credit.txt'),credit,'utf8');}
 async function download(row,work){
   const sourceDir=path.join(work,OUTPUT_MODE);fs.mkdirSync(sourceDir,{recursive:true});
@@ -79,19 +79,30 @@ async function processRow(row){
     fs.mkdirSync(work,{recursive:true});
     const source=await download(row,work);if(stop)throw new Error('Đã dừng theo yêu cầu.');
     const info=await probe(source);
-    row.status='rendering';row.progress=0;row.error='';save();
-    partial=path.join(work,'premiere.partial.mp4');
-    const duration=Number(info.format?.duration)||0;
-    await run(exe('ffmpeg'),premiereArgs(source,partial,info),{cwd:work,onLine:line=>{if(line.startsWith('out_time_us=')&&duration)row.progress=Math.min(99,Math.round(Number(line.split('=')[1])/1000000/duration*100));}});
+    let keepOriginal=false;
+    row.status='checking';row.progress=0;row.error='';save();
+    if(originalCandidate(info,source)){
+      try{keepOriginal=constantRateDetected(await run(exe('ffmpeg'),inspectOriginalArgs(source),{cwd:work,returnStderr:true}));}
+      catch(e){if(stop)throw e;}
+    }
+    let result=info,ready=source;
+    if(!keepOriginal){
+      row.status='rendering';row.progress=0;save();
+      partial=path.join(work,'premiere.partial.mp4');
+      const duration=Number(info.format?.duration)||0;
+      await run(exe('ffmpeg'),premiereArgs(source,partial,info),{cwd:work,onLine:line=>{if(line.startsWith('out_time_us=')&&duration)row.progress=Math.min(99,Math.round(Number(line.split('=')[1])/1000000/duration*100));}});
+      result=await probe(partial);ready=partial;
+    }
     if(stop)throw Error('Đã dừng theo yêu cầu.');
-    const result=await probe(partial);verifyPremiere(result);
+    verifyPremiere(result);
     const extension='.mp4',base=safeName(row.credit);
     let target=path.join(state.batchDir,base+extension);
     // Keep the source name exactly. Duplicate source names get their own subfolder.
     if(fs.existsSync(target)){const duplicateDir=path.join(state.batchDir,'trung-ten',row.id);fs.mkdirSync(duplicateDir,{recursive:true});target=path.join(duplicateDir,base+extension);}
-    fs.copyFileSync(partial,target,fs.constants.COPYFILE_EXCL);fs.unlinkSync(partial);
+    row.status='copying';row.progress=99;save();
+    fs.copyFileSync(ready,target,fs.constants.COPYFILE_EXCL);if(partial)fs.unlinkSync(partial);
     if(CLOUD)fs.rmSync(work,{recursive:true,force:true});
-    row.media=result;row.mode=OUTPUT_MODE;
+    row.media=result;row.mode=OUTPUT_MODE;row.processing=keepOriginal?'original':'transcoded';
     row.output=target;row.status='done';row.progress=100;row.error='';row.errorDetails='';
   }catch(e){row.status=stop?'stopped':'error';Object.assign(row,downloadError(e.message));row.progress=0;if(partial)try{fs.unlinkSync(partial);}catch{}}
   report();

@@ -15,10 +15,13 @@ const execute=(p,args)=>execFileSync(p,args,{windowsHide:true,stdio:['ignore','p
 const portrait=path.join(dir,'portrait.mp4'),wide=path.join(dir,'wide.webm');
 execute(ff,['-y','-f','lavfi','-i','color=c=0x52755f:s=360x640:d=1','-c:v','libx264','-pix_fmt','yuv420p',portrait]);
 execute(ff,['-y','-f','lavfi','-i','color=c=0x7898b4:s=2560x1440:r=30:d=1','-f','lavfi','-i','sine=frequency=440:duration=1','-vf',String.raw`setsar=16/15,select=not(mod(n\,2))+not(mod(n\,5))`,'-fps_mode','vfr','-c:v','libvpx-vp9','-deadline','realtime','-cpu-used','8','-pix_fmt','yuv420p','-c:a','libopus',wide]);
+const compatible=path.join(dir,'compatible.mp4'),vfr=path.join(dir,'vfr.mp4');
+execute(ff,['-y','-f','lavfi','-i','testsrc2=s=320x180:r=30:d=1','-f','lavfi','-i','sine=frequency=440:sample_rate=48000:duration=1','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-ar','48000',compatible]);
+execute(ff,['-y','-i',compatible,'-vf',String.raw`select=not(mod(n\,2))+not(mod(n\,5))`,'-fps_mode','vfr','-c:v','libx264','-pix_fmt','yuv420p','-c:a','copy',vfr]);
 let fail=true;
 const fixture=http.createServer((req,res)=>{
   if(req.url==='/retry.mp4'&&fail){res.writeHead(404);res.end();return;}
-  const file=req.url==='/wide.mp4'?wide:portrait;
+  const file=req.url==='/wide.mp4'?wide:req.url==='/compatible.mp4'?compatible:req.url==='/vfr.mp4'?vfr:portrait;
   res.writeHead(200,{'Content-Type':file===wide?'video/webm':'video/mp4','Content-Length':fs.statSync(file).size});fs.createReadStream(file).pipe(res);
 });
 await new Promise(r=>fixture.listen(43191,'127.0.0.1',r));
@@ -43,7 +46,7 @@ try{
     assert.equal(result.streams.some(s=>s.codec_type==='audio'),i===1);
   }
   const sha=f=>crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
-  assert.equal(inspect(first).streams.find(s=>s.codec_type==='video').codec_name,'h264');
+  assert.equal(inspect(first).streams.find(s=>s.codec_type==='video').codec_name,'h264');assert.equal(state.rows[0].processing,'original');assert.equal(sha(first),sha(portrait),'Compliant silent MP4 must remain byte-identical');assert.equal(state.rows[1].processing,'transcoded');
   const mp4=inspect(state.rows[1].output);assert.equal(mp4.streams.find(s=>s.codec_type==='video').codec_name,'h264');assert.equal(mp4.streams.find(s=>s.codec_type==='video').pix_fmt,'yuv420p');assert.equal(mp4.streams.find(s=>s.codec_type==='audio').codec_name,'aac');assert.equal(mp4.streams.find(s=>s.codec_type==='audio').sample_rate,'48000');const frames=JSON.parse(execute(fp,['-v','error','-select_streams','v:0','-show_entries','frame=best_effort_timestamp_time','-of','json',state.rows[1].output]).toString()).frames.map(f=>Number(f.best_effort_timestamp_time));const steps=frames.slice(1).map((x,i)=>x-frames[i]);assert.ok(Math.max(...steps)-Math.min(...steps)<0.0001,'Output must have constant frame intervals');
   assert.equal(path.basename(state.rows[1].output),'radoslawmosart.mp4');
   assert.ok(!/^001_/.test(path.basename(first)));
@@ -71,5 +74,8 @@ try{
   assert.ok(waiting.busy);assert.ok(waiting.retryState);assert.equal(waiting.rows[0].status,'error');
   await api('stop',{});state=await waitDone();assert.equal(state.busy,false);
   fail=false;await api('start',{});state=await waitDone();assert.equal(state.rows[0].status,'done');
-  console.log(JSON.stringify({passed:true,checks:['HTTP download','parallel queue','original dimensions and SAR','WebM VP9/Opus VFR to MP4 H264/yuv420p AAC48k CFR','source filename without prefix','duplicate names in separate folders','retry without overwrite','stop/resume','CSV report','local API protection'],artifacts:dir},null,2));
+  await api('save',{rows:[{url:'http://127.0.0.1:43191/compatible.mp4',credit:'Chuẩn có tiếng'},{url:'http://127.0.0.1:43191/vfr.mp4',credit:'MP4 nhưng VFR'}],settings:{autoRetry:false,workers:2,outputDir:path.join(dir,'smart-exports')}});
+  await api('start',{});state=await waitDone();assert.deepEqual(state.rows.map(r=>r.status),['done','done']);assert.deepEqual(state.rows.map(r=>r.processing),['original','transcoded']);assert.equal(sha(state.rows[0].output),sha(compatible),'Compliant MP4 with AAC must remain byte-identical');assert.notEqual(sha(state.rows[1].output),sha(vfr),'VFR MP4 must be converted');
+  const times=JSON.parse(execute(fp,['-v','error','-select_streams','v:0','-show_entries','frame=best_effort_timestamp_time','-of','json',state.rows[1].output]).toString()).frames.map(f=>Number(f.best_effort_timestamp_time)),delta=times.slice(1).map((t,i)=>t-times[i]);assert.ok(Math.max(...delta)-Math.min(...delta)<0.0001);
+  console.log(JSON.stringify({passed:true,checks:['Compliant MP4 byte-identical (silent and AAC)','VFR MP4 detected and converted to CFR','HTTP download','parallel queue','original dimensions and SAR','WebM VP9/Opus VFR to MP4 H264/yuv420p AAC48k CFR','source filename without prefix','duplicate names in separate folders','retry without overwrite','stop/resume','CSV report','local API protection'],artifacts:dir},null,2));
 }finally{server.kill();fixture.close();}

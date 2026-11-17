@@ -4,7 +4,7 @@ Công cụ Windows tải hàng loạt video từ danh sách Google Sheets/CSV v�
 
 ## Tải bản chạy sẵn
 
-Vào mục **Releases** của kho, tải `Noi-Dung-Tong-Hop-3.4.1-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo Noi Dung Tong Hop.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
+Vào mục **Releases** của kho, tải `Noi-Dung-Tong-Hop-3.4.2-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo Noi Dung Tong Hop.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
 
 Giao diện chạy tại http://127.0.0.1:43210. Dữ liệu mặc định lưu tại `%LOCALAPPDATA%\NoiDungTongHop`.
 
@@ -17,7 +17,7 @@ Giao diện chạy tại http://127.0.0.1:43210. Dữ liệu mặc định lưu 
 - Tên file theo nguồn, không thêm số thứ tự. Video trùng tên được lưu trong thư mục con riêng.
 - Hàng đợi, tiến độ, dừng/tiếp tục, thử lại dòng lỗi và bảng đối chiếu CSV.
 
-File đầu ra luôn là MP4, được chuyển mã chất lượng cao để dùng với Premiere. HDR được chuyển về SDR. Chữ hoặc watermark sẵn có trong nguồn vẫn được giữ. Không cam kết tải được các nội dung yêu cầu đăng nhập, CAPTCHA hoặc bị nền tảng hạn chế.
+File đầu ra luôn là MP4. Video đã đạt chuẩn Premiere được giữ nguyên từng byte; chỉ chuyển mã khi chưa đạt chuẩn hoặc không xác minh được. HDR được chuyển về SDR. Chữ hoặc watermark sẵn có trong nguồn vẫn được giữ. Không cam kết tải được các nội dung yêu cầu đăng nhập, CAPTCHA hoặc bị nền tảng hạn chế.
 
 ## Chạy từ mã nguồn
 

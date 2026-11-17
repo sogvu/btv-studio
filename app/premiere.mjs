@@ -1,4 +1,12 @@
 export const OUTPUT_MODE='premiere-mp4-v1';
+// Metadata alone cannot establish CFR. Only keep the original after a full
+// timestamp/decode check; unknown results always use the existing converter.
+export function originalCandidate(info,file){
+ const videos=info.streams?.filter(s=>s.codec_type==='video')||[],v=videos[0];
+ return !!(/\.mp4$/i.test(file)&&info.format?.format_name?.split(',').includes('mp4')&&info.format?.tags?.major_brand?.trim()!=='qt'&&videos.length===1&&v.codec_name==='h264'&&v.pix_fmt==='yuv420p'&&v.width>0&&v.height>0&&v.width%2===0&&v.height%2===0&&!['smpte2084','arib-std-b67'].includes(v.color_transfer)&&rate(v.avg_frame_rate)>=1&&rate(v.avg_frame_rate)<=240&&info.streams.filter(s=>s.codec_type==='audio').every(s=>s.codec_name==='aac'&&Number(s.sample_rate)===48000));
+}
+export function constantRateDetected(log){return /VFR:\s*0\.0+\s+\(0\/[1-9]\d*\)/.test(log);}
+export function inspectOriginalArgs(file){return ['-hide_banner','-nostdin','-xerror','-threads','1','-i',file,'-map','0:v:0','-map','0:a?','-sn','-dn','-filter_threads','1','-vf','vfrdet','-f','null','-'];}
 function rate(value){const p=String(value||'').split('/').map(Number);return p.length===2?p[0]/p[1]:p[0];}
 export function frameRate(video={}){
  const avg=rate(video.avg_frame_rate),nominal=rate(video.r_frame_rate);
