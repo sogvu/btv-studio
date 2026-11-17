@@ -56,3 +56,9 @@ Trên Chrome/Edge máy tính, bấm Chọn thư mục trên máy, cấp quyền 
 ## Windows 3.3 — Nội Dung Tổng Hợp
 
 Giải nén và mở Mo Noi Dung Tong Hop.cmd. Địa chỉ cục bộ mặc định http://127.0.0.1:43210; dữ liệu tại %LOCALAPPDATA%\NoiDungTongHop. Nhập đường dẫn thư mục lưu trong tool để lưu trực tiếp vào máy. Bản cũ ở cổng 43189 và dữ liệu cũ vẫn được giữ. Cấu hình runtime-config.json/BTV_DATA chỉ dùng khi cần đường dẫn riêng.
+
+## V3.4 — luôn MP4 cho Premiere (thay chế độ nguyên bản)
+
+Tải nguồn tốt nhất rồi xuất .mp4: H.264 High, yuv420p, CFR, AAC 48 kHz nếu có tiếng. CRF18/preset veryfast; không upscale, không thêm chữ. HDR tone-map về SDR; kích thước lẻ thêm tối đa một pixel ở mép. Không còn bảo đảm giống từng byte nguồn vì chuyển mã. Chậm hơn, đặc biệt Render Free; nên dùng 1 lượt trên web.
+
+File đã tải bằng bản cũ vẫn giữ nguyên. Nhấn Xuất lại danh sách thành MP4 Premiere để tạo lô mới. Chưa kiểm thử trực tiếp mọi phiên bản Premiere; kiểm tra codec, frame timestamp và giải mã file bằng FFmpeg.

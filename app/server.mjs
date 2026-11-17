@@ -1,3 +1,4 @@
+import {OUTPUT_MODE,premiereArgs,verifyPremiere} from './premiere.mjs';
 import {downloadError} from './errors.mjs';
 import {retryQueue} from './retry.mjs';
 import {MAX_WEB_ROWS,supportedWebUrl,isDouyin,douyinCookies} from './platforms.mjs';
@@ -12,7 +13,7 @@ import {defaults,settings,rowsFromText,validateRows,sheetExportUrl,safeName,csvR
 
 const CLOUD=process.env.BTV_CLOUD==='1';
 if(CLOUD&&!process.env.BTV_PASSWORD)throw new Error('BTV_PASSWORD required');
-const VERSION='3.3.0';
+const VERSION='3.4.0';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 let config={};try{config=JSON.parse(fs.readFileSync(path.join(ROOT,'runtime-config.json'),'utf8'));}catch{}
 const DATA=process.env.BTV_DATA||config.dataDir||path.join(process.env.LOCALAPPDATA||os.homedir(),'NoiDungTongHop');
@@ -56,10 +57,10 @@ function run(command,args,{cwd=DATA,onLine=()=>{},cancellable=true,timeout=0}={}
     p.on('error',e=>done(e));p.on('close',code=>done(code===0?null:new Error(stop&&cancellable?'Đã dừng theo yêu cầu.':err.trim()||`Bộ xử lý kết thúc với mã ${code}.`)));
   });
 }
-async function probe(file){const output=await run(exe('ffprobe'),['-v','error','-show_entries','format=duration:stream=codec_type,width,height','-of','json',file],{timeout:30000});const result=JSON.parse(output);if(!result.streams?.some(s=>s.codec_type==='video'))throw new Error('Nguồn không có luồng video.');return result;}
+async function probe(file){const output=await run(exe('ffprobe'),['-v','error','-show_entries','format=duration,format_name:stream=codec_type,codec_name,width,height,pix_fmt,sample_rate,avg_frame_rate,r_frame_rate,color_transfer,sample_aspect_ratio','-of','json',file],{timeout:30000});const result=JSON.parse(output);if(!result.streams?.some(s=>s.codec_type==='video'))throw new Error('Nguồn không có luồng video.');return result;}
 async function prepare(work,credit){fs.mkdirSync(work,{recursive:true});fs.copyFileSync(font,path.join(work,'font.ttf'));fs.writeFileSync(path.join(work,'credit.txt'),credit,'utf8');}
 async function download(row,work){
-  const sourceDir=path.join(work,'original-best-v2');fs.mkdirSync(sourceDir,{recursive:true});
+  const sourceDir=path.join(work,OUTPUT_MODE);fs.mkdirSync(sourceDir,{recursive:true});
   const marker=path.join(sourceDir,'download.json');
   try{const cached=JSON.parse(fs.readFileSync(marker,'utf8'));if(cached.url===row.url&&fs.existsSync(cached.file)){await probe(cached.file);return cached.file;}}catch{}
   row.status='downloading';row.progress=0;save();
@@ -78,14 +79,19 @@ async function processRow(row){
     fs.mkdirSync(work,{recursive:true});
     const source=await download(row,work);if(stop)throw new Error('Đã dừng theo yêu cầu.');
     const info=await probe(source);
-    row.status='copying';row.progress=99;row.error='';save();
-    const extension=path.extname(source),base=safeName(row.credit);
+    row.status='rendering';row.progress=0;row.error='';save();
+    partial=path.join(work,'premiere.partial.mp4');
+    const duration=Number(info.format?.duration)||0;
+    await run(exe('ffmpeg'),premiereArgs(source,partial,info),{cwd:work,onLine:line=>{if(line.startsWith('out_time_us=')&&duration)row.progress=Math.min(99,Math.round(Number(line.split('=')[1])/1000000/duration*100));}});
+    if(stop)throw Error('Đã dừng theo yêu cầu.');
+    const result=await probe(partial);verifyPremiere(result);
+    const extension='.mp4',base=safeName(row.credit);
     let target=path.join(state.batchDir,base+extension);
     // Keep the source name exactly. Duplicate source names get their own subfolder.
     if(fs.existsSync(target)){const duplicateDir=path.join(state.batchDir,'trung-ten',row.id);fs.mkdirSync(duplicateDir,{recursive:true});target=path.join(duplicateDir,base+extension);}
-    fs.copyFileSync(source,target,fs.constants.COPYFILE_EXCL);
+    fs.copyFileSync(partial,target,fs.constants.COPYFILE_EXCL);fs.unlinkSync(partial);
     if(CLOUD)fs.rmSync(work,{recursive:true,force:true});
-    row.media=info;row.mode='original-best-v2';
+    row.media=result;row.mode=OUTPUT_MODE;
     row.output=target;row.status='done';row.progress=100;row.error='';row.errorDetails='';
   }catch(e){row.status=stop?'stopped':'error';Object.assign(row,downloadError(e.message));row.progress=0;if(partial)try{fs.unlinkSync(partial);}catch{}}
   report();
@@ -135,6 +141,7 @@ const server=http.createServer(async(req,res)=>{
       if(req.method==='GET'&&u.pathname==='/api/output'){
         const row=state.rows.find(r=>r.id===u.searchParams.get('id'));
         if(!row||row.status!=='done'||!row.output||!fs.existsSync(row.output))throw new Error('Không tìm thấy video đã xuất.');
+        if(row.mode!==OUTPUT_MODE)throw new Error('File cũ chưa được xuất MP4 cho Premiere. Nhấn Xuất lại danh sách thành MP4 Premiere trước.');
         res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Length':fs.statSync(row.output).size,'Content-Disposition':`attachment; filename="video${path.extname(row.output)}"; filename*=UTF-8''${encodeURIComponent(path.basename(row.output))}`,'Cache-Control':'no-store'});
         return fs.createReadStream(row.output).pipe(res);
       }
@@ -169,20 +176,20 @@ const server=http.createServer(async(req,res)=>{
         const nextSettings=settings(b.settings);
         const previous=new Map(state.rows.map(r=>[r.id,r]));
         const matches=(r,i)=>{const old=previous.get(b.rows[i]?.id);return old&&old.url===r.url&&old.credit===r.credit;};
-        const keepBatch=state.mode==='original-best-v2'&&state.batchId&&state.settings.outputDir===nextSettings.outputDir&&rows.some(matches);
+        const keepBatch=state.mode===OUTPUT_MODE&&state.batchId&&state.settings.outputDir===nextSettings.outputDir&&rows.some(matches);
         const nextRows=rows.map((r,i)=>keepBatch&&matches(r,i)?{...previous.get(b.rows[i].id),index:r.index,warning:r.warning}:r);
-        state={rows:nextRows,settings:nextSettings,mode:'original-best-v2',batchId:keepBatch?state.batchId:'',batchDir:keepBatch?state.batchDir:'',running:false};save();return json(res,{ok:true});
+        state={rows:nextRows,settings:nextSettings,mode:OUTPUT_MODE,batchId:keepBatch?state.batchId:'',batchDir:keepBatch?state.batchDir:'',running:false};save();return json(res,{ok:true});
       }
       if(u.pathname==='/api/start'){
         const retryErrors=b.onlyErrors===true;
-        if(retryErrors&&state.mode!=='original-best-v2')throw new Error('Lô cũ cần chuyển sang bản nguyên gốc trước.');
+        if(retryErrors&&state.mode!==OUTPUT_MODE)throw new Error('Lô cũ cần chạy Bắt đầu để xuất lại MP4 cho Premiere.');
         if(retryErrors&&!state.rows.some(r=>r.status==='error'))throw new Error('Không có video lỗi để tải lại.');
         needTools();if(!state.rows.length)throw new Error('Chưa có danh sách video.');
         state.settings=settings(state.settings);
         if(!retryErrors&&state.rows.some(r=>r.status==='invalid'))throw new Error('Sửa hoặc xóa các dòng thiếu/sai thông tin trước khi chạy.');
-        if(state.mode!=='original-best-v2'){
+        if(state.mode!==OUTPUT_MODE){
           fs.writeFileSync(path.join(DATA,'state-before-original-'+Date.now()+'.json'),JSON.stringify(state,null,2));
-          state.rows=validateRows(state.rows);state.mode='original-best-v2';state.batchId='';state.batchDir='';
+          state.rows=validateRows(state.rows);state.mode=OUTPUT_MODE;state.batchId='';state.batchDir='';
         }
         if(!state.batchId){
           state.batchId=new Date().toISOString().replace(/[:.]/g,'-')+'_'+crypto.randomBytes(3).toString('hex');

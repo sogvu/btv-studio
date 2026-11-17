@@ -4,7 +4,7 @@ Công cụ Windows tải hàng loạt video từ danh sách Google Sheets/CSV v�
 
 ## Tải bản chạy sẵn
 
-Vào mục **Releases** của kho, tải `BTV-Studio-3.2-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo Noi Dung Tong Hop.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
+Vào mục **Releases** của kho, tải `Noi-Dung-Tong-Hop-3.4-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo Noi Dung Tong Hop.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
 
 Giao diện chạy tại http://127.0.0.1:43210. Dữ liệu mặc định lưu tại `%LOCALAPPDATA%\NoiDungTongHop`.
 
@@ -13,11 +13,11 @@ Giao diện chạy tại http://127.0.0.1:43210. Dữ liệu mặc định lưu 
 - Nhập hai cột Link video và Nguồn/Credit bằng cách dán từ Sheets hoặc nhập CSV UTF-8.
 - Đọc Google Sheets truy cập được bằng link; bảng riêng tư dùng dán dữ liệu hoặc CSV.
 - Chọn chất lượng tốt nhất nguồn cho phép tải, không giới hạn 1080p.
-- Không chèn credit, không đổi khung hình, không mã hóa lại. Nếu cần ghép hình và tiếng, chỉ ghép luồng.
+- Xuất MP4 H.264 8-bit yuv420p, tốc độ khung hình cố định và âm thanh AAC 48 kHz. Không chèn credit; giữ kích thước và tỉ lệ nguồn (cạnh lẻ thêm tối đa 1 pixel viền).
 - Tên file theo nguồn, không thêm số thứ tự. Video trùng tên được lưu trong thư mục con riêng.
 - Hàng đợi, tiến độ, dừng/tiếp tục, thử lại dòng lỗi và bảng đối chiếu CSV.
 
-File đầu ra có thể là MP4, WebM hoặc MKV tùy nguồn. Chữ hoặc watermark sẵn có trong nguồn vẫn được giữ. Không cam kết tải được các nội dung yêu cầu đăng nhập, CAPTCHA hoặc bị nền tảng hạn chế.
+File đầu ra luôn là MP4, được chuyển mã chất lượng cao để dùng với Premiere. HDR được chuyển về SDR. Chữ hoặc watermark sẵn có trong nguồn vẫn được giữ. Không cam kết tải được các nội dung yêu cầu đăng nhập, CAPTCHA hoặc bị nền tảng hạn chế.
 
 ## Chạy từ mã nguồn
 
@@ -38,7 +38,7 @@ npm test
 node tests/integration.mjs
 ```
 
-Kiểm thử tích hợp cần các bộ xử lý trong `bin` hoặc đường dẫn cấu hình, dùng các cổng thử 43190 và 43191. Phép thử tải video mẫu qua HTTP cục bộ, so sánh SHA-256, kiểm tra tên file, trùng tên và dừng/thử lại. Không sử dụng tài khoản hoặc video riêng tư.
+Kiểm thử tích hợp cần các bộ xử lý trong `bin` hoặc đường dẫn cấu hình, dùng các cổng thử 43190 và 43191. Phép thử tải video mẫu qua HTTP cục bộ, kiểm tra H.264/AAC/CFR, giữ tỉ lệ, tên file, trùng tên và dừng/thử lại. Không sử dụng tài khoản hoặc video riêng tư.
 
 Xem [hướng dẫn](HUONG_DAN.md) và [kết quả kiểm thử](KIEM_THU.md).
 
