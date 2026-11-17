@@ -4,7 +4,7 @@ Công cụ Windows tải hàng loạt video từ danh sách Google Sheets/CSV v�
 
 ## Tải bản chạy sẵn
 
-Vào mục **Releases** của kho, tải `Noi-Dung-Tong-Hop-3.4.5-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo Noi Dung Tong Hop.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
+Vào mục **Releases** của kho, tải `Noi-Dung-Tong-Hop-3.5.0-Windows.zip`, giải nén toàn bộ rồi nhấp đúp **Mo Noi Dung Tong Hop.cmd**. Bộ ZIP đi kèm Node.js, yt-dlp, FFmpeg và ffprobe. Cần Internet để tải video.
 
 Giao diện chạy tại http://127.0.0.1:43210. Dữ liệu mặc định lưu tại `%LOCALAPPDATA%\NoiDungTongHop`.
 
@@ -53,3 +53,7 @@ Bản ZIP có thư mục `licenses` kèm giấy phép và liên kết nguồn c�
 ## Phiên bản 3
 
 Giao diện mới; bản web hỗ trợ 60 video/lô và 1–3 video đồng thời. Douyin ở mức thử nghiệm: nhận link đầy đủ/rút gọn và file cookies Netscape chỉ thuộc Douyin. Kiểm tra thực tế 16/11/2026: link mẫu bị 403 và yêu cầu cookies mới; chưa xác minh tải Douyin thành công. Render Free có thể quá tải với 3 lượt, giảm còn 1–2 nếu cần.
+
+## Cấu trúc và quy tắc phát triển
+
+Phiên bản 3.5 tách backend và giao diện thành các module riêng, giữ tính năng của 3.4.5. Xem [AGENTS.md](AGENTS.md), [bảng trách nhiệm module](docs/ARCHITECTURE.md), [rà soát](docs/REFRACTOR_AUDIT.md) và [kiểm chứng 3.5](docs/VALIDATION_35.md). Điểm vào vẫn là `app/server.mjs` và `public/ui.js`; chạy không cần cài thêm dependency. Bộ kiểm thử dùng `npm test` và `npm run test:integration` với thư mục bộ xử lý được cấu hình theo hướng dẫn.

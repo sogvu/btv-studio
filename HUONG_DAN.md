@@ -78,3 +78,7 @@ Tool ưu tiên bản MP4 H.264 và tiếng AAC nguồn cung cấp, ưu tiên AAC
 ## 3.4.5 — Sửa mất kết nối và giảm quá tải Render
 
 Tự lấy phiên mới khi máy chủ khởi động lại, không tải lại trang và không mất nội dung đang nhập. Các yêu cầu cập nhật tiến độ không chạy chồng lên nhau; lỗi mạng có thời gian chờ và tự thử lại. Chỉ tự gửi lại thao tác khi máy chủ đã xác nhận từ chối vì phiên cũ; không tự gửi lại POST khi mất mạng để tránh chạy hai lần. Bản web chỉ xử lý 1 video/lượt, tối đa 2 đoạn tải song song và dùng cấu hình mã hóa ít bộ đệm RAM; Windows vẫn 1–3 video/lượt. Khi máy chủ bị gián đoạn, các dòng dừng cần nhấn Tiếp tục. Không bảo đảm Render Free đủ RAM cho mọi video độ phân giải cao; file tạm có thể mất khi Render thay máy.
+
+## 3.5.0 — Tách module để bảo trì
+
+Giữ tính năng và cách dùng 3.4.5. Tách tải nguồn, xử lý MP4, hàng đợi, lưu trạng thái, file kết quả, nhập Sheets, cookies, xác thực và API. Giao diện tách điều phối, hiển thị bảng và lưu file; điểm vào không đổi. Có AGENTS.md quy định phạm vi sửa và kiểm thử, docs/ARCHITECTURE.md ghi trách nhiệm module. Không cần cài thêm thư viện. Dữ liệu/state cũ và tên thư mục lưu giữ tương thích.
