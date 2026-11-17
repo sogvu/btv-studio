@@ -70,3 +70,7 @@ Kiểm tra MP4, H.264 8-bit, AAC 48 kHz (nếu có tiếng) và quét toàn bộ
 ## 3.4.3 — Tối ưu tốc độ
 
 Bỏ giới hạn 4 MiB/s trên web. Tải đồng thời 4 đoạn trên web, 8 đoạn trên Windows đối với nguồn HLS/DASH hỗ trợ. Nếu thiếu đoạn, báo lỗi để thử lại, không bỏ qua đoạn. Windows chia tối đa 8 luồng CPU/video theo số video đồng thời; Render giữ 1 luồng để hạn chế quá tải. Vẫn kiểm tra CFR đầy đủ, giữ chất lượng nguồn và MP4 Premiere. Dòng Đang tải hiển thị tốc độ và thời gian dự kiến khi nguồn cung cấp. Tốc độ phụ thuộc nguồn, mạng và CPU.
+
+## 3.4.4 — Chọn MP4 từ nguồn trước khi tải
+
+Tool ưu tiên bản MP4 H.264 và tiếng AAC nguồn cung cấp, ưu tiên AAC 48 kHz nếu có. Hình/tiếng tách riêng chỉ ghép luồng, không mã hóa lại. Sau khi tải, file đúng chuẩn CFR được giữ nguyên. Chỉ chuyển mã khi nguồn không có bản phù hợp hoặc file thực tế chưa đạt chuẩn. Bản MP4 có thể có độ phân giải thấp hơn bản AV1/VP9 tốt nhất trên một số nguồn. Cache nguồn cũ được tách để không dùng lại nhầm WebM. Video đã hoàn thành không bị tải lại.

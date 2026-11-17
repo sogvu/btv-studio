@@ -1,3 +1,4 @@
+import {DOWNLOAD_POLICY,SOURCE_FORMAT} from './formats.mjs';
 import {downloadTuning,cpuThreads} from './performance.mjs';
 import {OUTPUT_MODE,premiereArgs,verifyPremiere,originalCandidate,constantRateDetected,inspectOriginalArgs} from './premiere.mjs';
 import {downloadError} from './errors.mjs';
@@ -14,7 +15,7 @@ import {defaults,settings,rowsFromText,validateRows,sheetExportUrl,safeName,csvR
 
 const CLOUD=process.env.BTV_CLOUD==='1';
 if(CLOUD&&!process.env.BTV_PASSWORD)throw new Error('BTV_PASSWORD required');
-const VERSION='3.4.3';
+const VERSION='3.4.4';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 let config={};try{config=JSON.parse(fs.readFileSync(path.join(ROOT,'runtime-config.json'),'utf8'));}catch{}
 const DATA=process.env.BTV_DATA||config.dataDir||path.join(process.env.LOCALAPPDATA||os.homedir(),'NoiDungTongHop');
@@ -61,16 +62,16 @@ function run(command,args,{cwd=DATA,onLine=()=>{},cancellable=true,timeout=0,ret
 async function probe(file){const output=await run(exe('ffprobe'),['-v','error','-show_entries','format=duration,format_name:format_tags=major_brand:stream=codec_type,codec_name,width,height,pix_fmt,sample_rate,avg_frame_rate,r_frame_rate,color_transfer,sample_aspect_ratio','-of','json',file],{timeout:30000});const result=JSON.parse(output);if(!result.streams?.some(s=>s.codec_type==='video'))throw new Error('Nguồn không có luồng video.');return result;}
 async function prepare(work,credit){fs.mkdirSync(work,{recursive:true});fs.copyFileSync(font,path.join(work,'font.ttf'));fs.writeFileSync(path.join(work,'credit.txt'),credit,'utf8');}
 async function download(row,work){
-  const sourceDir=path.join(work,OUTPUT_MODE);fs.mkdirSync(sourceDir,{recursive:true});
+  const sourceDir=path.join(work,DOWNLOAD_POLICY);fs.mkdirSync(sourceDir,{recursive:true});
   const marker=path.join(sourceDir,'download.json');
-  try{const cached=JSON.parse(fs.readFileSync(marker,'utf8'));if(cached.url===row.url&&fs.existsSync(cached.file)){await probe(cached.file);return cached.file;}}catch{}
+  try{const cached=JSON.parse(fs.readFileSync(marker,'utf8'));if(cached.policy===DOWNLOAD_POLICY&&cached.url===row.url&&fs.existsSync(cached.file)){await probe(cached.file);return cached.file;}}catch{}
   row.status='downloading';row.progress=0;save();
   const cookieArgs=[];if(isDouyin(row.url)&&fs.existsSync(COOKIE_FILE)){const localCookie=path.join(work,'douyin-cookies.txt');fs.copyFileSync(COOKIE_FILE,localCookie);cookieArgs.push('--cookies',localCookie);}
-  const output=await run(exe('yt-dlp'),[...cookieArgs,'--ignore-config','--no-playlist','--no-overwrites','--newline','--progress','--progress-template','download:BTV:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s','--print','after_move:BTVFILE:%(filepath)s','--no-simulate',...downloadTuning(CLOUD),'--socket-timeout','30','--retries','3','--fragment-retries','3','--ffmpeg-location',BIN,'--js-runtimes',`node:${process.execPath}`,'-f','bv*+ba/b','-o',path.join(sourceDir,'source.%(ext)s'),'--',row.url],{cwd:work,onLine:line=>{if(line.startsWith('BTV:')){const [percent,speed,eta]=line.slice(4).split('|');row.progress=Math.max(0,Math.min(100,parseFloat(percent)||0));row.transfer=[speed,eta&&'còn '+eta].filter(x=>x&&!x.includes('Unknown')&&!x.includes('N/A')).join(' · ');}},timeout:30*60*1000});
+  const output=await run(exe('yt-dlp'),[...cookieArgs,'--ignore-config','--no-playlist','--no-overwrites','--newline','--progress','--progress-template','download:BTV:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s','--print','after_move:BTVFILE:%(filepath)s','--no-simulate',...downloadTuning(CLOUD),'--socket-timeout','30','--retries','3','--fragment-retries','3','--ffmpeg-location',BIN,'--js-runtimes',`node:${process.execPath}`,'-f',SOURCE_FORMAT,'-o',path.join(sourceDir,'source.%(ext)s'),'--',row.url],{cwd:work,onLine:line=>{if(line.startsWith('BTV:')){const [percent,speed,eta]=line.slice(4).split('|');row.progress=Math.max(0,Math.min(100,parseFloat(percent)||0));row.transfer=[speed,eta&&'còn '+eta].filter(x=>x&&!x.includes('Unknown')&&!x.includes('N/A')).join(' · ');}},timeout:30*60*1000});
   const found=output.split(/\r?\n/).filter(s=>s.startsWith('BTVFILE:')).at(-1)?.slice(8).trim();
   if(!found||!fs.existsSync(found))throw new Error('Không tìm thấy file sau khi tải.');
   const resolved=path.resolve(found);if(!resolved.startsWith(path.resolve(sourceDir)+path.sep))throw new Error('Đường dẫn tải không hợp lệ.');
-  await probe(resolved);fs.writeFileSync(marker,JSON.stringify({url:row.url,file:resolved}));return resolved;
+  await probe(resolved);fs.writeFileSync(marker,JSON.stringify({policy:DOWNLOAD_POLICY,url:row.url,file:resolved}));return resolved;
 }
 async function processRow(row){
   const work=path.join(DATA,'work',state.batchId,row.id);
