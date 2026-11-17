@@ -75,6 +75,7 @@ export function createRequestHandler(config, app, getPort) {
         return res.end(html);
       }
       const files = {
+        '/logo-3s.svg': ['logo-3s.svg', 'image/svg+xml; charset=utf-8'],
         '/studio.mjs': ['studio.mjs', 'text/javascript; charset=utf-8'],
         '/downloads.mjs': ['downloads.mjs', 'text/javascript; charset=utf-8'],
         '/queue-view.mjs': ['queue-view.mjs', 'text/javascript; charset=utf-8'],
