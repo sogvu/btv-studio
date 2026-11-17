@@ -14,4 +14,4 @@ main{margin-left:192px;width:calc(100% - 192px);padding:30px;max-width:1900px}he
 
 .transfer-info{font-size:11px;color:#45617d;margin-top:6px;line-height:1.6;overflow-wrap:anywhere}
 
-.brand .brand-logo{display:block;object-fit:contain;padding:4px;background:#fff;border-radius:10px;font-size:0}
+.brand .brand-logo{display:block;object-fit:contain;padding:0;background:transparent;border-radius:0;font-size:0}
