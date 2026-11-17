@@ -1,76 +1,98 @@
 let activeIntro = null;
-export function showBrandIntro({ force = false, root = document, duration = 2400 } = {}) {
+const SEEN_KEY = '3s-puzzle-intro-seen';
+
+export function showBrandIntro({ root = document, duration = 4000 } = {}) {
   const panel = root.querySelector('#brand-intro');
   if (!panel) return Promise.resolve(false);
   if (activeIntro) return activeIntro;
   const win = root.defaultView;
   try {
-    if (!force && win.sessionStorage.getItem('3s-intro-seen') === '1')
-      return Promise.resolve(false);
+    if (win.sessionStorage.getItem(SEEN_KEY) === '1') return Promise.resolve(false);
   } catch {}
   const reduced = win.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const previous = root.activeElement,
-    background = [...root.body.children]
-      .filter((el) => el !== panel && ['DIV', 'HEADER', 'MAIN', 'FOOTER'].includes(el.tagName))
-      .map((el) => [el, el.inert]);
+  const previous = root.activeElement;
+  const background = [...root.body.children]
+    .filter((el) => el !== panel && ['DIV', 'HEADER', 'MAIN', 'FOOTER'].includes(el.tagName))
+    .map((el) => [el, el.inert]);
   for (const [el] of background) el.inert = true;
-  panel.hidden = false;
   panel.classList.remove('intro-closing');
+  panel.classList.add('intro-preparing');
+  panel.hidden = false;
   root.body.classList.add('intro-open');
   const buttons = [...panel.querySelectorAll('[data-intro-close]')];
   let timer,
+    loadTimer,
+    started = false,
     closed = false;
   activeIntro = new Promise((resolve) => {
     function finish() {
       if (closed) return;
       closed = true;
       clearTimeout(timer);
+      clearTimeout(loadTimer);
       panel.classList.add('intro-closing');
       root.removeEventListener('keydown', key);
-      for (const b of buttons) b.removeEventListener('click', finish);
+      for (const button of buttons) button.removeEventListener('click', finish);
       setTimeout(
         () => {
           panel.hidden = true;
-          panel.classList.remove('intro-closing');
+          panel.classList.remove('intro-closing', 'intro-preparing');
           root.body.classList.remove('intro-open');
           for (const [el, inert] of background) el.inert = inert;
           if (previous?.isConnected && previous !== root.body)
             previous.focus({ preventScroll: true });
           activeIntro = null;
           try {
-            win.sessionStorage.setItem('3s-intro-seen', '1');
+            win.sessionStorage.setItem(SEEN_KEY, '1');
           } catch {}
           resolve(true);
         },
         reduced ? 0 : 320,
       );
     }
-    function key(e) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
+    function key(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
         finish();
       }
-      if (e.key === 'Tab') {
+      if (event.key === 'Tab') {
         const first = buttons[0],
           last = buttons.at(-1);
-        if (e.shiftKey && root.activeElement === first) {
-          e.preventDefault();
+        if (event.shiftKey && root.activeElement === first) {
+          event.preventDefault();
           last.focus();
-        } else if (!e.shiftKey && root.activeElement === last) {
-          e.preventDefault();
+        } else if (!event.shiftKey && root.activeElement === last) {
+          event.preventDefault();
           first.focus();
         }
       }
     }
-    for (const b of buttons) b.addEventListener('click', finish);
+    function start() {
+      if (closed || started) return;
+      started = true;
+      clearTimeout(loadTimer);
+      panel.classList.remove('intro-preparing');
+      timer = duration > 0 ? setTimeout(finish, reduced ? 700 : duration) : null;
+    }
+    for (const button of buttons) button.addEventListener('click', finish);
     root.addEventListener('keydown', key);
-    buttons.at(-1)?.focus({ preventScroll: true });
-    timer = duration > 0 ? setTimeout(finish, reduced ? 700 : duration) : null;
+    buttons[0]?.focus({ preventScroll: true });
+    // Decode the shared logo before starting its movement; never wait indefinitely.
+    loadTimer = setTimeout(start, 1500);
+    const src = panel.querySelector('.puzzle-final')?.getAttribute('href');
+    if (src) {
+      const image = new win.Image();
+      image.src = src;
+      if (image.decode)
+        image
+          .decode()
+          .catch(() => {})
+          .then(start);
+      else start();
+    } else start();
   });
   return activeIntro;
 }
 export function mountBrandIntro(root = document) {
-  for (const button of root.querySelectorAll('[data-replay-intro]'))
-    button.addEventListener('click', () => void showBrandIntro({ force: true, root, duration: 0 }));
   void showBrandIntro({ root });
 }

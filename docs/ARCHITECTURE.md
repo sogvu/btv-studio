@@ -59,3 +59,7 @@ BTV_BIN cần trỏ tới thư mục có ffmpeg/ffprobe/yt-dlp. BTV_DATA trong k
 ## Nhận diện 3S từ 3.6
 
 `public/theme-3s.css` sở hữu token màu, viền và hiệu ứng; `public/brand-intro.mjs` chỉ quản lý intro, sessionStorage hiển thị lần đầu, focus/inert và nút đóng/xem lại. `public/ui.js` ghép intro và studio, không chờ intro kết thúc để tải trạng thái. Hai module này không được sửa queue, phát lệnh tải hoặc thay codec. Trang tải GitHub Pages dùng bản sao theme/intro tương ứng trong `website/`. Logo gốc được giữ trong SVG có xử lý nền trong suốt.
+
+## Intro ghép logo từ 3.7
+
+`puzzle-intro.css` sở hữu timeline ghép bốn lớp màu từ logo gốc; SVG inline trong trang giữ nguyên vị trí cuối và chuyển sang ảnh gốc sau khi ghép. `brand-intro.mjs` chờ decode ảnh có giới hạn, tự đóng, xử lý Bỏ qua/Esc và focus/inert. Không còn nút hoặc sự kiện xem lại; chỉ mount lúc vào trang. Đồng bộ HTML/CSS/JS trong public và website. Intro không thay đổi trạng thái hoặc tiến trình tải.

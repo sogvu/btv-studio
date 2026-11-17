@@ -1,0 +1,38 @@
+/* 3S assembly: four original-color layers move independently; the exact logo
+   replaces the isolated layers after they meet. No animation touches jobs. */
+.brand-intro .intro-center{animation:none}
+.brand-intro .puzzle-stage{width:220px;height:220px;margin:0 auto 25px;position:relative;isolation:isolate}
+.brand-intro .puzzle-mark{display:block;position:relative;width:100%;height:100%;overflow:visible}
+.puzzle-piece{transform-box:view-box;animation:piece-arrive 1.65s cubic-bezier(.18,.78,.2,1) var(--piece-delay) both,piece-clear .28s linear 2.2s forwards;will-change:transform,opacity}
+.puzzle-orange{--piece-x:-130px;--piece-y:-760px;--piece-turn:-24deg;--piece-delay:0s;transform-origin:51% 25%}
+.puzzle-red{--piece-x:800px;--piece-y:-70px;--piece-turn:27deg;--piece-delay:.16s;transform-origin:82% 47%}
+.puzzle-green{--piece-x:-800px;--piece-y:90px;--piece-turn:-28deg;--piece-delay:.08s;transform-origin:20% 54%}
+.puzzle-cyan{--piece-x:110px;--piece-y:790px;--piece-turn:23deg;--piece-delay:.24s;transform-origin:53% 77%}
+.puzzle-final{animation:logo-complete .45s ease 1.9s both}
+.puzzle-lock-ring{position:absolute;inset:-10px;pointer-events:none;border:1px solid #67d5ce66;border-radius:50%;animation:logo-lock .7s ease-out 1.85s both}
+.brand-intro .intro-halo{inset:-5px;animation:halo-lock 1s ease 1.7s both}
+.brand-intro .intro-kicker{animation:brand-copy-in .65s ease 1.55s both}
+.brand-intro #intro-title{animation:brand-copy-in .7s cubic-bezier(.2,.8,.2,1) 1.9s both}
+.brand-intro .intro-subtitle{animation:brand-copy-in .7s ease 2.05s both}
+.brand-intro .intro-palette i{animation:intro-color-in .45s ease 2.2s both}
+.brand-intro .intro-palette i:nth-child(2){animation-delay:2.27s}.brand-intro .intro-palette i:nth-child(3){animation-delay:2.34s}.brand-intro .intro-palette i:nth-child(4){animation-delay:2.41s}
+.brand-intro .intro-enter{animation:brand-control-in .5s ease 2.3s both}
+.brand-intro .intro-skip{z-index:3}
+@keyframes piece-arrive{
+  0%{opacity:0;transform:translate(var(--piece-x),var(--piece-y)) rotate(var(--piece-turn)) scale(.88)}
+  12%{opacity:1}
+  76%{opacity:1;transform:translate(calc(var(--piece-x) * -.012),calc(var(--piece-y) * -.012)) rotate(0deg) scale(1.015)}
+  90%{opacity:1;transform:translate(0,0) rotate(0deg) scale(.998)}
+  100%{opacity:1;transform:translate(0,0) rotate(0deg) scale(1)}
+}
+@keyframes piece-clear{to{opacity:0}}
+@keyframes logo-complete{from{opacity:0}to{opacity:1}}
+@keyframes logo-lock{0%{opacity:0;transform:scale(.88)}25%{opacity:.6}100%{opacity:0;transform:scale(1.24)}}
+@keyframes halo-lock{from{opacity:.08;transform:scale(.75)}to{opacity:.6;transform:scale(1)}}
+@keyframes brand-copy-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes brand-control-in{from{opacity:0;visibility:hidden;transform:translateY(7px)}to{opacity:1;visibility:visible;transform:translateY(0)}}
+@media(max-width:560px){.brand-intro .puzzle-stage{width:175px;height:175px;margin-bottom:24px}.brand-intro #intro-title{font-size:38px}}
+@media(max-height:680px){.brand-intro .puzzle-stage{width:160px;height:160px;margin-bottom:18px}.brand-intro .intro-center{padding-top:15px;padding-bottom:15px}.brand-intro .intro-palette{margin-bottom:20px}}
+@media(prefers-reduced-motion:reduce){.brand-intro .puzzle-piece,.brand-intro .puzzle-lock-ring{display:none}.brand-intro .puzzle-final,.brand-intro .intro-kicker,.brand-intro #intro-title,.brand-intro .intro-subtitle,.brand-intro .intro-enter,.brand-intro .intro-palette i{animation:none!important;opacity:1;visibility:visible;transform:none}.brand-intro .intro-halo{animation:none!important;opacity:.4}}
+
+.brand-intro.intro-preparing *{animation-play-state:paused!important}

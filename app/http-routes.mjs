@@ -75,6 +75,7 @@ export function createRequestHandler(config, app, getPort) {
         return res.end(html);
       }
       const files = {
+        '/puzzle-intro.css': ['puzzle-intro.css', 'text/css; charset=utf-8'],
         '/brand-intro.mjs': ['brand-intro.mjs', 'text/javascript; charset=utf-8'],
         '/theme-3s.css': ['theme-3s.css', 'text/css; charset=utf-8'],
         '/logo-3s.svg': ['logo-3s.svg', 'image/svg+xml; charset=utf-8'],

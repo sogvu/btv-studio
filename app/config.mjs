@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
-export const VERSION = '3.6.0';
+export const VERSION = '3.7.0';
 export function loadConfig(ROOT) {
   const CLOUD = process.env.BTV_CLOUD === '1';
   if (CLOUD && !process.env.BTV_PASSWORD) throw new Error('BTV_PASSWORD required');

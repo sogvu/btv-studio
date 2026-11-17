@@ -46,3 +46,5 @@ Node.js >=22, thư viện chuẩn; yt-dlp, FFmpeg, ffprobe lấy từ bộ bin c
 
 ## Nhận diện 3S MEDIA
 Màu và hiệu ứng đặt ở theme-3s.css; intro đặt ở brand-intro.mjs. Giữ intro có thể bỏ qua/Esc, khôi phục focus/inert và giảm chuyển động theo hệ thống. Intro chỉ hiển thị, không điều khiển hàng đợi hoặc chặn tiến trình tải phía máy chủ. Đồng bộ bản theme/intro trên GitHub Pages khi sửa giao diện dùng chung.
+
+Intro từ 3.7 chỉ tự chạy lúc mở trang; không thêm lại nút xem intro khi chưa được yêu cầu. Chuyển động ghép mảnh ở puzzle-intro.css, giữ logo gốc ở trạng thái hoàn chỉnh và không để lỗi tải ảnh khóa giao diện.

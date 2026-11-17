@@ -86,3 +86,7 @@ Giữ tính năng và cách dùng 3.4.5. Tách tải nguồn, xử lý MP4, hàn
 ## 3.6.0 — Nhận diện 3S MEDIA
 
 Bản Windows và web dùng logo 3S MEDIA nền trong suốt và bốn màu cam, đỏ, xanh lá, xanh ngọc. Intro tự hiện khoảng 2,4 giây ở lần mở đầu của mỗi tab, không phát âm thanh; có nút Bỏ qua hoặc Vào không gian làm việc. Nút Xem intro 3S ở đầu trang mở lại intro và chờ bạn chọn vào/bỏ qua; phím Esc cũng đóng được. Chuyển động tự giảm theo tùy chọn của hệ điều hành. Nút có hiệu ứng rê chuột/nhấn, viền bo tròn và vòng focus bàn phím. Tính năng tải, chuẩn MP4, retry, lưu file và giới hạn Windows/web giữ nguyên.
+
+## 3.7.0 — Intro bốn mảnh ghép
+
+Thay intro cũ: bốn mảnh màu tách rời chuyển động vào vị trí, logo gốc hoàn chỉnh và chữ 3S MEDIA xuất hiện sau đó. Intro tự hiện ở đầu mỗi tab và tự đóng sau khoảng 4 giây (có thể chờ tối đa 1,5 giây để nạp logo); không có nút xem lại. Vẫn có Bỏ qua, Vào không gian làm việc và Esc. Chế độ giảm chuyển động hiển thị logo tĩnh và chuyển nhanh. Các luồng tải/MP4/lưu file giữ nguyên.
